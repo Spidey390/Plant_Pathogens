@@ -9,12 +9,11 @@ import io
 import os
 import gdown
 from PIL import Image
-
 MODEL_PATH = "plant_disease_model.h5"
 GDRIVE_FILE_ID = "13e9PTZCsu10q8l0tnRSmQjjL8Kh5h9pK"
+
 def download_model():
     if not os.path.exists(MODEL_PATH):
-        print("Downloading model from Google Drive...")
         url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
         gdown.download(url, MODEL_PATH, quiet=False)
         print("Model downloaded successfully!")
