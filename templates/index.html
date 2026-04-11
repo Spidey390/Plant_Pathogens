@@ -1,249 +1,421 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-<title>Plant Disease Detection</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial;background:#0a1a0a;color:white;padding:20px}
-h1{color:#4caf50;margin-bottom:20px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
-.card{background:#1a2e1a;padding:20px;border-radius:10px}
-h2{color:#81c784;margin-bottom:15px;font-size:16px}
-video,canvas{width:100%;border-radius:8px;background:#000;display:block}
-canvas{display:none}
-.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:bold;margin:5px;width:calc(50% - 10px)}
-.btn-green{background:#4caf50;color:black}
-.btn-red{background:#e53935;color:white}
-.btn-blue{background:#1976d2;color:white}
-.btn-gray{background:#555;color:white}
-.btn:disabled{opacity:0.5;cursor:not-allowed}
-.upload-area{border:2px dashed #4caf50;border-radius:8px;padding:30px;text-align:center;cursor:pointer;margin-bottom:10px;transition:background 0.2s}
-.upload-area:hover{background:#1e3e1e}
-input[type=file]{display:none}
-.preview-img{width:100%;border-radius:8px;margin-top:10px;display:none}
-.result-box{background:#0d1f0d;border:1px solid #2e4e2e;border-radius:8px;padding:15px;margin-top:15px;min-height:60px;text-align:center}
-.result-label{font-size:24px;font-weight:bold;margin-bottom:5px}
-.confidence{color:#aaa;font-size:14px}
-.Blight{color:#ef5350}
-.Common_Rust{color:#ff9800}
-.Gray_Leaf_Spot{color:#bdbdbd}
-.Healthy{color:#66bb6a}
-.badge{padding:4px 12px;border-radius:20px;font-size:13px;display:inline-block}
-.badge.Blight{background:#e53935}
-.badge.Common_Rust{background:#ff9800;color:black}
-.badge.Gray_Leaf_Spot{background:#9e9e9e;color:black}
-.badge.Healthy{background:#4caf50;color:black}
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px;border:1px solid #2e4e2e;text-align:left;font-size:13px}
-th{background:#2e4e2e}
-.status{font-size:12px;color:#888;margin-bottom:10px}
-.live-badge{background:#e53935;color:white;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-.tab-btns{display:flex;margin-bottom:15px}
-.tab-btn{padding:8px 20px;border:none;border-radius:8px 8px 0 0;cursor:pointer;font-size:13px;background:#0d1f0d;color:#aaa;margin-right:5px}
-.tab-btn.active{background:#2e4e2e;color:white}
-@media(max-width:700px){.grid{grid-template-columns:1fr}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhytoScan Pro — AI Agronomy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap"
+    rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --brand: #10b981;
+      --bg: #09090b;
+      --card: #18181b;
+      --border: #27272a
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: #fafafa;
+      margin: 0;
+      overflow-x: hidden
+    }
+
+    .syne {
+      font-family: 'Syne', sans-serif
+    }
+
+    .glass {
+      background: rgba(24, 24, 27, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border)
+    }
+
+    .scanner-line {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent, var(--brand), transparent);
+      height: 40%;
+      width: 100%;
+      opacity: 0.2;
+      animation: scan 3s linear infinite
+    }
+
+    @keyframes scan {
+      0% {
+        transform: translateY(-100%)
+      }
+
+      100% {
+        transform: translateY(250%)
+      }
+    }
+
+    .pulse-emerald {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .5
+      }
+    }
+
+    .shimmer {
+      position: relative;
+      overflow: hidden
+    }
+
+    .shimmer::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+      animation: shimmer 2s infinite
+    }
+
+    @keyframes shimmer {
+      0% {
+        left: -100%
+      }
+
+      100% {
+        left: 200%
+      }
+    }
+
+    button:active {
+      transform: scale(0.98)
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none
+    }
+  </style>
 </head>
-<body>
 
-<h1>🌿 Plant Disease Detection</h1>
-
-<div class="grid">
-
-  <!-- LEFT — Camera + Upload -->
-  <div class="card">
-    <div class="tab-btns">
-      <button class="tab-btn active" onclick="switchTab('camera')">📷 Live Camera</button>
-      <button class="tab-btn" onclick="switchTab('upload')">📁 Upload Photo</button>
+<body class="min-h-screen">
+  <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div
+        class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+        <i data-lucide="leaf" class="text-zinc-950 w-6 h-6"></i>
+      </div>
+      <span class="syne text-xl font-800 tracking-tight">PHYTO<span class="text-emerald-500">SCAN</span></span>
     </div>
-
-    <!-- Camera Tab -->
-    <div id="cameraTab">
-      <video id="video" autoplay playsinline></video>
-      <canvas id="canvas"></canvas>
-      <div style="margin-top:10px;text-align:center">
-        <button class="btn btn-green" id="startBtn" onclick="startCamera()">▶ Start Camera</button>
-        <button class="btn btn-red" id="stopBtn" onclick="stopCamera()" disabled>■ Stop</button>
-        <button class="btn btn-blue" id="captureBtn" onclick="captureAndPredict()" disabled style="width:calc(100% - 10px);margin-top:5px">🔍 Capture & Predict</button>
-        <button class="btn btn-gray" id="liveBtn" onclick="toggleLive()" disabled style="width:calc(100% - 10px);margin-top:5px">🔴 Start Live Predict</button>
+    <div class="flex items-center gap-4">
+      <div
+        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-emerald"></span>
+        Engine v2.5 Online
       </div>
-      <div class="result-box" id="cameraResult">
-        <span style="color:#555">Start camera and click Capture & Predict</span>
-      </div>
+      <button class="p-2 rounded-lg hover:bg-white/5 transition-colors">
+        <i data-lucide="settings" class="w-5 h-5 text-zinc-400"></i>
+      </button>
     </div>
-
-    <!-- Upload Tab -->
-    <div id="uploadTab" style="display:none">
-      <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-        <div style="font-size:40px">📁</div>
-        <div style="margin-top:10px;color:#aaa">Click to select image</div>
-        <div style="font-size:12px;color:#666;margin-top:5px">JPG, PNG supported</div>
+  </nav>
+  <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <section class="lg:col-span-8 space-y-6">
+      <div class="flex p-1 bg-zinc-900 rounded-xl w-fit border border-zinc-800">
+        <button onclick="setView('camera')" id="btn-camera"
+          class="px-6 py-2.5 rounded-lg text-sm font-semibold transition-all bg-emerald-500 text-zinc-950 shadow-lg">Live
+          Camera</button>
+        <button onclick="setView('upload')" id="btn-upload"
+          class="px-6 py-2.5 rounded-lg text-sm font-semibold transition-all text-zinc-400 hover:text-white">Upload
+          Image</button>
       </div>
-      <input type="file" id="fileInput" accept="image/*" onchange="previewAndPredict(event)">
-      <img id="previewImg" class="preview-img">
-      <button class="btn btn-blue" id="uploadPredictBtn" onclick="predictUpload()" disabled style="width:100%;margin-top:10px">🔍 Predict</button>
-      <div class="result-box" id="uploadResult">
-        <span style="color:#555">Select an image to predict</span>
+      <div class="relative group">
+        <div
+          class="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-1000">
+        </div>
+        <div class="relative aspect-video rounded-2xl overflow-hidden bg-zinc-950 border border-zinc-800 shadow-2xl">
+          <div id="camera-view" class="w-full h-full relative">
+            <video id="video" class="w-full h-full object-cover" autoplay playsinline muted></video>
+            <div id="scan-overlay" class="hidden absolute inset-0 pointer-events-none">
+              <div class="scanner-line"></div>
+              <div class="absolute top-8 left-8 w-12 h-12 border-t-4 border-l-4 border-emerald-500 rounded-tl-lg"></div>
+              <div
+                class="absolute top-8 right-8 w-12 h-12 border-t-4 border-right-4 border-emerald-500 border-r-4 rounded-tr-lg">
+              </div>
+              <div class="absolute bottom-8 left-8 w-12 h-12 border-b-4 border-l-4 border-emerald-500 rounded-bl-lg">
+              </div>
+              <div class="absolute bottom-8 right-8 w-12 h-12 border-b-4 border-r-4 border-emerald-500 rounded-br-lg">
+              </div>
+            </div>
+            <div id="cam-placeholder"
+              class="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/50 backdrop-blur-sm">
+              <div
+                class="w-20 h-20 bg-zinc-800 rounded-3xl flex items-center justify-center mb-4 border border-zinc-700">
+                <i data-lucide="camera-off" class="w-8 h-8 text-zinc-500"></i>
+              </div>
+              <p class="text-zinc-400 font-medium">Camera access required</p>
+              <button onclick="initCamera()"
+                class="mt-4 px-8 py-3 bg-emerald-500 text-zinc-950 rounded-xl font-bold hover:bg-emerald-400 transition-colors">Initialize
+                Feed</button>
+            </div>
+          </div>
+          <div id="upload-view"
+            class="hidden w-full h-full bg-zinc-900 flex flex-col items-center justify-center p-12 text-center cursor-pointer hover:bg-zinc-800/80 transition-all border-2 border-dashed border-zinc-700"
+            onclick="document.getElementById('file-input').click()">
+            <div
+              class="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mb-6 border border-emerald-500/20">
+              <i data-lucide="upload-cloud" class="w-10 h-10 text-emerald-500"></i>
+            </div>
+            <h3 class="text-xl font-bold mb-2">Drag & Drop Plant Image</h3>
+            <p class="text-zinc-500 text-sm max-w-xs">Supported formats: JPG, PNG, HEIC. Max file size: 10MB.</p>
+            <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFileUpload(event)">
+            <img id="upload-preview" class="hidden absolute inset-0 w-full h-full object-cover">
+          </div>
+        </div>
       </div>
+      <div class="grid grid-cols-2 gap-4">
+        <button id="analyze-btn" disabled onclick="startAnalysis()"
+          class="flex items-center justify-center gap-3 py-4 bg-zinc-800 border border-zinc-700 rounded-2xl font-bold text-zinc-400 disabled:opacity-50 transition-all">
+          <i data-lucide="zap" class="w-5 h-5"></i>
+          Capture & Diagnose
+        </button>
+        <button id="clear-btn" onclick="resetApp()"
+          class="flex items-center justify-center gap-3 py-4 bg-zinc-900 border border-zinc-800 rounded-2xl font-bold text-zinc-500 hover:text-white transition-all">
+          <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+          Reset Session
+        </button>
+      </div>
+      <div id="result-card"
+        class="hidden glass rounded-2xl p-8 border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent">
+        <div class="flex flex-col md:flex-row gap-8 items-start">
+          <div class="flex-1 space-y-4">
+            <div
+              class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase">
+              Diagnosis Complete
+            </div>
+            <h2 id="result-title" class="syne text-4xl font-800 text-white leading-tight">...</h2>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="p-4 bg-white/5 rounded-xl border border-white/10">
+                <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Confidence</p>
+                <p id="result-confidence" class="text-2xl font-bold text-emerald-400">0%</p>
+              </div>
+              <div class="p-4 bg-white/5 rounded-xl border border-white/10">
+                <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Status</p>
+                <p id="result-status" class="text-2xl font-bold text-white">Detecting...</p>
+              </div>
+            </div>
+            <p id="result-treatment"
+              class="text-zinc-400 leading-relaxed italic border-l-2 border-emerald-500 pl-4 py-1">...</p>
+          </div>
+          <div class="w-full md:w-64 h-64 rounded-xl overflow-hidden border border-white/10 shadow-lg">
+            <img id="result-img" src="" class="w-full h-full object-cover">
+          </div>
+        </div>
+      </div>
+    </section>
+    <aside class="lg:col-span-4 space-y-6">
+      <div class="glass rounded-2xl border border-white/5 flex flex-col h-[700px]">
+        <div class="p-6 border-b border-white/5 flex items-center justify-between">
+          <h3 class="syne text-lg font-bold">Activity Log</h3>
+          <span id="log-count" class="text-[10px] px-2 py-0.5 bg-zinc-800 rounded-full font-bold text-zinc-400">0
+            items</span>
+        </div>
+        <div id="history-container" class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
+          <div class="flex flex-col items-center justify-center h-full opacity-20 text-center px-8">
+            <i data-lucide="history" class="w-12 h-12 mb-4"></i>
+            <p class="text-sm font-medium">Diagnostic history will appear here after analysis.</p>
+          </div>
+        </div>
+        <div class="p-4 border-t border-white/5 bg-zinc-950/50 rounded-b-2xl">
+          <div class="flex items-center gap-3 text-[11px] font-bold text-zinc-500">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+            Encrypted Cloud Sync Active
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+  <div id="loader"
+    class="fixed inset-0 z-[100] bg-zinc-950/80 backdrop-blur-md hidden flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4">
+      </div>
+      <p class="syne text-xl font-bold text-emerald-400 animate-pulse">Running Neural Engine...</p>
     </div>
   </div>
-
-  <!-- RIGHT — Results Table -->
-  <div class="card">
-    <h2>📋 Detection History <span id="liveDot"></span></h2>
-    <p class="status" id="status">Loading...</p>
-    <table>
-      <thead>
-        <tr><th>ID</th><th>Time</th><th>Disease</th><th>Confidence</th></tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
-  </div>
-
+  <canvas id="internal-canvas" class="hidden"></canvas>
+  <script>
+    const apiKey = "";
+    let stream = null;
+    let currentMode = 'camera';
+    let history = [];
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('internal-canvas');
+    function setView(mode) {
+      currentMode = mode;
+      document.getElementById('camera-view').classList.toggle('hidden', mode !== 'camera');
+      document.getElementById('upload-view').classList.toggle('hidden', mode !== 'upload');
+      const btnCam = document.getElementById('btn-camera');
+      const btnUp = document.getElementById('btn-upload');
+      if (mode === 'camera') {
+        btnCam.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all bg-emerald-500 text-zinc-950 shadow-lg";
+        btnUp.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all text-zinc-400 hover:text-white";
+      } else {
+        btnUp.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all bg-emerald-500 text-zinc-950 shadow-lg";
+        btnCam.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all text-zinc-400 hover:text-white";
+      }
+      updateActionButtons();
+    }
+    async function initCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+        document.getElementById('cam-placeholder').classList.add('hidden');
+        updateActionButtons();
+      } catch (e) {
+        alert("Camera permission denied. Please enable camera to use live diagnostics.");
+      }
+    }
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = document.getElementById('upload-preview');
+        img.src = event.target.result;
+        img.classList.remove('hidden');
+        updateActionButtons();
+      };
+      reader.readAsDataURL(file);
+    }
+    function updateActionButtons() {
+      const btn = document.getElementById('analyze-btn');
+      if (currentMode === 'camera') {
+        btn.disabled = !stream;
+        btn.innerHTML = `<i data-lucide="zap" class="w-5 h-5"></i> Capture & Diagnose`;
+        btn.className = !stream ? "flex items-center justify-center gap-3 py-4 bg-zinc-800 border border-zinc-700 rounded-2xl font-bold text-zinc-400 opacity-50 cursor-not-allowed transition-all" : "flex items-center justify-center gap-3 py-4 bg-emerald-500/10 border border-emerald-500/50 rounded-2xl font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all";
+      } else {
+        const hasFile = !!document.getElementById('file-input').files[0];
+        btn.disabled = !hasFile;
+        btn.innerHTML = `<i data-lucide="search" class="w-5 h-5"></i> Analyze Upload`;
+        btn.className = !hasFile ? "flex items-center justify-center gap-3 py-4 bg-zinc-800 border border-zinc-700 rounded-2xl font-bold text-zinc-400 opacity-50 cursor-not-allowed transition-all" : "flex items-center justify-center gap-3 py-4 bg-emerald-500/10 border border-emerald-500/50 rounded-2xl font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all";
+      }
+      lucide.createIcons();
+    }
+    async function startAnalysis() {
+      document.getElementById('loader').classList.remove('hidden');
+      document.getElementById('scan-overlay').classList.remove('hidden');
+      let imageData;
+      if (currentMode === 'camera') {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        imageData = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+      } else {
+        const file = document.getElementById('file-input').files[0];
+        imageData = await fileToBase64(file);
+      }
+      try {
+        const diagnosis = await getAIDiagnosis(imageData);
+        displayResult(diagnosis, imageData);
+      } catch (error) {
+        alert("Analysis failed. Please check connection and try again.");
+      } finally {
+        document.getElementById('loader').classList.add('hidden');
+        document.getElementById('scan-overlay').classList.add('hidden');
+      }
+    }
+    async function getAIDiagnosis(base64Image) {
+      const prompt = "Act as a pro agronomist. Analyze this plant image. Identify the plant species and its health status. If diseased, identify the disease and give a concise 1-sentence organic treatment. Return JSON: { \"plant\": \"Name\", \"status\": \"Healthy/Disease Name\", \"confidence\": 0.XX, \"treatment\": \"...\" }";
+      const payload = {
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: "image/jpeg", data: base64Image } }
+          ]
+        }]
+      };
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      let retries = 0;
+      while (retries < 5) {
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await response.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          const jsonMatch = text.match(/\{.*\}/s);
+          return JSON.parse(jsonMatch[0]);
+        } catch (e) {
+          retries++;
+          await new Promise(r => setTimeout(r, Math.pow(2, retries) * 1000));
+        }
+      }
+      throw new Error("API Max retries reached");
+    }
+    function displayResult(data, base64) {
+      const card = document.getElementById('result-card');
+      card.classList.remove('hidden');
+      document.getElementById('result-title').textContent = data.plant;
+      document.getElementById('result-confidence').textContent = Math.round(data.confidence * 100) + '%';
+      document.getElementById('result-status').textContent = data.status;
+      document.getElementById('result-treatment').textContent = data.treatment;
+      document.getElementById('result-img').src = `data:image/jpeg;base64,${base64}`;
+      const isHealthy = data.status.toLowerCase().includes('healthy');
+      document.getElementById('result-status').className = isHealthy ? "text-2xl font-bold text-emerald-400" : "text-2xl font-bold text-rose-400";
+      addToHistory(data);
+      card.scrollIntoView({ behavior: 'smooth' });
+    }
+    function addToHistory(data) {
+      const item = { ...data, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+      history.unshift(item);
+      const container = document.getElementById('history-container');
+      if (history.length === 1) container.innerHTML = '';
+      const el = document.createElement('div');
+      el.className = "p-4 glass rounded-xl border border-white/5 animate-in slide-in-from-right-4 transition-all hover:bg-white/5 cursor-pointer shimmer";
+      const isHealthy = data.status.toLowerCase().includes('healthy');
+      el.innerHTML = `
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs font-bold text-zinc-500 uppercase tracking-tighter">${item.time}</span>
+<span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${isHealthy ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}">${data.status}</span>
 </div>
-
-<script>
-let stream = null;
-let liveInterval = null;
-let isLive = false;
-let uploadedFile = null;
-
-function switchTab(tab) {
-  document.getElementById('cameraTab').style.display = tab === 'camera' ? 'block' : 'none';
-  document.getElementById('uploadTab').style.display = tab === 'upload' ? 'block' : 'none';
-  document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', (i === 0 && tab === 'camera') || (i === 1 && tab === 'upload'));
-  });
-}
-
-async function startCamera() {
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    document.getElementById('video').srcObject = stream;
-    document.getElementById('startBtn').disabled = true;
-    document.getElementById('stopBtn').disabled = false;
-    document.getElementById('captureBtn').disabled = false;
-    document.getElementById('liveBtn').disabled = false;
-  } catch(e) {
-    alert('Camera access denied. Please allow camera permission.');
-  }
-}
-
-function stopCamera() {
-  if(liveInterval) toggleLive();
-  if(stream) stream.getTracks().forEach(t => t.stop());
-  stream = null;
-  document.getElementById('video').srcObject = null;
-  document.getElementById('startBtn').disabled = false;
-  document.getElementById('stopBtn').disabled = true;
-  document.getElementById('captureBtn').disabled = true;
-  document.getElementById('liveBtn').disabled = true;
-}
-
-function captureFrame() {
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-}
-
-async function captureAndPredict() {
-  const blob = await captureFrame();
-  const result = await sendToAPI(blob);
-  showResult('cameraResult', result);
-}
-
-function toggleLive() {
-  isLive = !isLive;
-  const btn = document.getElementById('liveBtn');
-  const dot = document.getElementById('liveDot');
-  if(isLive) {
-    btn.textContent = '⏹ Stop Live Predict';
-    btn.className = 'btn btn-red';
-    dot.innerHTML = '<span class="live-badge">LIVE</span>';
-    liveInterval = setInterval(async () => {
-      const blob = await captureFrame();
-      const result = await sendToAPI(blob);
-      showResult('cameraResult', result);
-      loadHistory();
-    }, 5000);
-  } else {
-    btn.textContent = '🔴 Start Live Predict';
-    btn.className = 'btn btn-gray';
-    dot.innerHTML = '';
-    clearInterval(liveInterval);
-    liveInterval = null;
-  }
-}
-
-function previewAndPredict(event) {
-  uploadedFile = event.target.files[0];
-  if(!uploadedFile) return;
-  const url = URL.createObjectURL(uploadedFile);
-  const img = document.getElementById('previewImg');
-  img.src = url;
-  img.style.display = 'block';
-  document.getElementById('uploadPredictBtn').disabled = false;
-  document.getElementById('uploadResult').innerHTML = '<span style="color:#aaa">Click Predict to analyze</span>';
-}
-
-async function predictUpload() {
-  if(!uploadedFile) return;
-  const result = await sendToAPI(uploadedFile);
-  showResult('uploadResult', result);
-}
-
-async function sendToAPI(blob) {
-  const formData = new FormData();
-  formData.append('file', blob, 'image.jpg');
-  try {
-    const res = await fetch('/predict', { method: 'POST', body: formData });
-    return await res.json();
-  } catch(e) {
-    return { error: 'Server error. Try again.' };
-  }
-}
-
-function showResult(elementId, result) {
-  const el = document.getElementById(elementId);
-  if(result.error) {
-    el.innerHTML = `<span style="color:#ef5350">${result.error}</span>`;
-    return;
-  }
-  const disease = result.disease;
-  const confidence = (result.confidence * 100).toFixed(1);
-  el.innerHTML = `
-    <div class="result-label ${disease}">${disease.replace('_', ' ')}</div>
-    <div class="confidence">Confidence: ${confidence}%</div>
-    <div style="margin-top:8px;font-size:12px;color:#555">${result.timestamp}</div>
-  `;
-}
-
-async function loadHistory() {
-  try {
-    const res = await fetch('/results');
-    const data = await res.json();
-    let html = '';
-    data.data.forEach(r => {
-      html += `<tr>
-        <td>${r[0]}</td>
-        <td style="font-size:11px">${r[1].replace('T',' ').slice(0,19)}</td>
-        <td><span class="badge ${r[2]}">${r[2].replace('_',' ')}</span></td>
-        <td>${(r[3]*100).toFixed(1)}%</td>
-      </tr>`;
-    });
-    document.getElementById('tbody').innerHTML = html;
-    document.getElementById('status').innerText = 'Updated: ' + new Date().toLocaleTimeString();
-  } catch(e) {
-    document.getElementById('status').innerText = 'Failed to load history';
-  }
-}
-
-loadHistory();
-setInterval(loadHistory, 10000);
-</script>
+<h4 class="font-bold text-sm text-white">${data.plant}</h4>
+<div class="mt-2 w-full bg-zinc-800 h-1 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500" style="width: ${data.confidence * 100}%"></div>
+</div>
+`;
+      container.prepend(el);
+      document.getElementById('log-count').textContent = `${history.length} items`;
+    }
+    function resetApp() {
+      document.getElementById('result-card').classList.add('hidden');
+      document.getElementById('upload-preview').classList.add('hidden');
+      document.getElementById('file-input').value = '';
+      updateActionButtons();
+    }
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = error => reject(error);
+      });
+    }
+    window.onload = () => {
+      lucide.createIcons();
+    };
+  </script>
 </body>
+
 </html>
