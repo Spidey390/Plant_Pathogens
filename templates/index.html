@@ -1,421 +1,511 @@
 <!DOCTYPE html>
+
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PhytoScan Pro — AI Agronomy</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap"
-    rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <style>
-    :root {
-      --brand: #10b981;
-      --bg: #09090b;
-      --card: #18181b;
-      --border: #27272a
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhytoScan Pro — AI Agronomy</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--brand:#10b981}
+*{box-sizing:border-box}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#09090b;color:#fafafa;margin:0;overflow-x:hidden;min-height:100vh}
+.syne{font-family:'Syne',sans-serif}
+.glass{background:rgba(24,24,27,0.85);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06)}
 
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: var(--bg);
-      color: #fafafa;
-      margin: 0;
-      overflow-x: hidden
-    }
+/* Scanner animation */
+.scanner-line{
+position:absolute;left:0;right:0;height:3px;
+background:linear-gradient(to right,transparent,#10b981,transparent);
+animation:scan 2.5s linear infinite;opacity:0.7;
+}
+@keyframes scan{0%{top:-3px}100%{top:100%}}
 
-    .syne {
-      font-family: 'Syne', sans-serif
-    }
+/* Pulse */
+.pulse-em{animation:pulseEm 2s cubic-bezier(0.4,0,0.6,1) infinite}
+@keyframes pulseEm{0%,100%{opacity:1}50%{opacity:0.4}}
 
-    .glass {
-      background: rgba(24, 24, 27, 0.8);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border)
-    }
+/* Spin */
+.spin{animation:rot 0.8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
 
-    .scanner-line {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to bottom, transparent, var(--brand), transparent);
-      height: 40%;
-      width: 100%;
-      opacity: 0.2;
-      animation: scan 3s linear infinite
-    }
+/* Fade up */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp 0.4s ease forwards}
 
-    @keyframes scan {
-      0% {
-        transform: translateY(-100%)
-      }
+/* Slide in */
+@keyframes slideIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+.slide-in{animation:slideIn 0.3s ease forwards}
 
-      100% {
-        transform: translateY(250%)
-      }
-    }
+/* Active press */
+button:not(:disabled):active{transform:scale(0.97)}
 
-    .pulse-emerald {
-      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite
-    }
+/* Scrollbar hide */
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
 
-    @keyframes pulse {
+/* Live badge */
+.live-badge{display:none;align-items:center;gap:6px}
+.live-badge.show{display:flex}
 
-      0%,
-      100% {
-        opacity: 1
-      }
+/* Corners */
+.corner{position:absolute;width:22px;height:22px;border-color:#10b981;border-style:solid}
+.c-tl{top:12px;left:12px;border-width:2px 0 0 2px;border-radius:3px 0 0 0}
+.c-tr{top:12px;right:12px;border-width:2px 2px 0 0;border-radius:0 3px 0 0}
+.c-bl{bottom:12px;left:12px;border-width:0 0 2px 2px;border-radius:0 0 0 3px}
+.c-br{bottom:12px;right:12px;border-width:0 2px 2px 0;border-radius:0 0 3px 0}
 
-      50% {
-        opacity: .5
-      }
-    }
+/* Confidence bar */
+.conf-fill{height:100%;border-radius:9999px;transition:width 0.6s ease}
 
-    .shimmer {
-      position: relative;
-      overflow: hidden
-    }
+/* Result colors */
+.disease-Healthy{color:#10b981}
+.disease-Blight{color:#f87171}
+.disease-Common_Rust{color:#fb923c}
+.disease-Gray_Leaf_Spot{color:#a78bfa}
 
-    .shimmer::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 50%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
-      animation: shimmer 2s infinite
-    }
+/* Status pills */
+.pill-Healthy{background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.25)}
+.pill-Blight{background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.25)}
+.pill-Common_Rust{background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.25)}
+.pill-Gray_Leaf_Spot{background:rgba(167,139,250,0.12);color:#a78bfa;border:1px solid rgba(167,139,250,0.25)}
 
-    @keyframes shimmer {
-      0% {
-        left: -100%
-      }
+/* Result border glow */
+.result-Healthy{border-color:rgba(16,185,129,0.3)!important}
+.result-Blight{border-color:rgba(248,113,113,0.3)!important}
+.result-Common_Rust{border-color:rgba(251,146,60,0.3)!important}
+.result-Gray_Leaf_Spot{border-color:rgba(167,139,250,0.3)!important}
 
-      100% {
-        left: 200%
-      }
-    }
+/* Bar color */
+.bar-Healthy{background:#10b981}
+.bar-Blight{background:#f87171}
+.bar-Common_Rust{background:#fb923c}
+.bar-Gray_Leaf_Spot{background:#a78bfa}
 
-    button:active {
-      transform: scale(0.98)
-    }
+/* History dot */
+.dot-Healthy{background:#10b981}
+.dot-Blight{background:#f87171}
+.dot-Common_Rust{background:#fb923c}
+.dot-Gray_Leaf_Spot{background:#a78bfa}
 
-    .no-scrollbar::-webkit-scrollbar {
-      display: none
-    }
-  </style>
+/* Treatment border */
+.treat-Healthy{border-color:#10b981}
+.treat-Blight{border-color:#f87171}
+.treat-Common_Rust{border-color:#fb923c}
+.treat-Gray_Leaf_Spot{border-color:#a78bfa}
+
+/* Responsive helpers */
+@media(max-width:1024px){
+.main-grid{grid-template-columns:1fr!important}
+.aside-col{order:-1}
+.history-panel{height:320px!important}
+}
+@media(max-width:640px){
+.action-grid{grid-template-columns:1fr!important}
+.result-inner{flex-direction:column!important}
+.result-img-wrap{width:100%!important;height:200px!important}
+nav{padding:0 14px!important}
+.wrap{padding:14px!important}
+}
+</style>
+
 </head>
+<body>
 
-<body class="min-h-screen">
-  <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-3 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <div
-        class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-        <i data-lucide="leaf" class="text-zinc-950 w-6 h-6"></i>
-      </div>
-      <span class="syne text-xl font-800 tracking-tight">PHYTO<span class="text-emerald-500">SCAN</span></span>
+<!-- NAV -->
+
+<nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-3 flex items-center justify-between" style="padding:0 20px;height:58px">
+  <div class="flex items-center gap-3">
+    <div style="width:36px;height:36px;background:#10b981;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#052e16" stroke-width="2.5" stroke-linecap="round"><path d="M12 2C8 2 5 5 5 9c0 4 3 7 7 8v3h4v-3c4-1 7-4 7-8 0-4-3-7-7-7z"/><polyline points="9 12 11 14 15 10"/></svg>
     </div>
-    <div class="flex items-center gap-4">
-      <div
-        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold uppercase tracking-wider text-emerald-400">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-emerald"></span>
-        Engine v2.5 Online
-      </div>
-      <button class="p-2 rounded-lg hover:bg-white/5 transition-colors">
-        <i data-lucide="settings" class="w-5 h-5 text-zinc-400"></i>
-      </button>
+    <span class="syne" style="font-size:17px;font-weight:800;letter-spacing:-0.3px;color:#fafafa">PHYTO<span style="color:#10b981">SCAN</span></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="live-badge" id="liveBadge" style="padding:5px 12px;border-radius:999px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);font-size:11px;font-weight:700;color:#f87171;letter-spacing:0.5px">
+      <span style="width:6px;height:6px;background:#f87171;border-radius:50%;flex-shrink:0" class="pulse-em"></span>
+      LIVE
     </div>
-  </nav>
-  <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
-    <section class="lg:col-span-8 space-y-6">
-      <div class="flex p-1 bg-zinc-900 rounded-xl w-fit border border-zinc-800">
-        <button onclick="setView('camera')" id="btn-camera"
-          class="px-6 py-2.5 rounded-lg text-sm font-semibold transition-all bg-emerald-500 text-zinc-950 shadow-lg">Live
-          Camera</button>
-        <button onclick="setView('upload')" id="btn-upload"
-          class="px-6 py-2.5 rounded-lg text-sm font-semibold transition-all text-zinc-400 hover:text-white">Upload
-          Image</button>
-      </div>
-      <div class="relative group">
-        <div
-          class="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-1000">
-        </div>
-        <div class="relative aspect-video rounded-2xl overflow-hidden bg-zinc-950 border border-zinc-800 shadow-2xl">
-          <div id="camera-view" class="w-full h-full relative">
-            <video id="video" class="w-full h-full object-cover" autoplay playsinline muted></video>
-            <div id="scan-overlay" class="hidden absolute inset-0 pointer-events-none">
-              <div class="scanner-line"></div>
-              <div class="absolute top-8 left-8 w-12 h-12 border-t-4 border-l-4 border-emerald-500 rounded-tl-lg"></div>
-              <div
-                class="absolute top-8 right-8 w-12 h-12 border-t-4 border-right-4 border-emerald-500 border-r-4 rounded-tr-lg">
-              </div>
-              <div class="absolute bottom-8 left-8 w-12 h-12 border-b-4 border-l-4 border-emerald-500 rounded-bl-lg">
-              </div>
-              <div class="absolute bottom-8 right-8 w-12 h-12 border-b-4 border-r-4 border-emerald-500 rounded-br-lg">
-              </div>
-            </div>
-            <div id="cam-placeholder"
-              class="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/50 backdrop-blur-sm">
-              <div
-                class="w-20 h-20 bg-zinc-800 rounded-3xl flex items-center justify-center mb-4 border border-zinc-700">
-                <i data-lucide="camera-off" class="w-8 h-8 text-zinc-500"></i>
-              </div>
-              <p class="text-zinc-400 font-medium">Camera access required</p>
-              <button onclick="initCamera()"
-                class="mt-4 px-8 py-3 bg-emerald-500 text-zinc-950 rounded-xl font-bold hover:bg-emerald-400 transition-colors">Initialize
-                Feed</button>
-            </div>
-          </div>
-          <div id="upload-view"
-            class="hidden w-full h-full bg-zinc-900 flex flex-col items-center justify-center p-12 text-center cursor-pointer hover:bg-zinc-800/80 transition-all border-2 border-dashed border-zinc-700"
-            onclick="document.getElementById('file-input').click()">
-            <div
-              class="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mb-6 border border-emerald-500/20">
-              <i data-lucide="upload-cloud" class="w-10 h-10 text-emerald-500"></i>
-            </div>
-            <h3 class="text-xl font-bold mb-2">Drag & Drop Plant Image</h3>
-            <p class="text-zinc-500 text-sm max-w-xs">Supported formats: JPG, PNG, HEIC. Max file size: 10MB.</p>
-            <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFileUpload(event)">
-            <img id="upload-preview" class="hidden absolute inset-0 w-full h-full object-cover">
-          </div>
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <button id="analyze-btn" disabled onclick="startAnalysis()"
-          class="flex items-center justify-center gap-3 py-4 bg-zinc-800 border border-zinc-700 rounded-2xl font-bold text-zinc-400 disabled:opacity-50 transition-all">
-          <i data-lucide="zap" class="w-5 h-5"></i>
-          Capture & Diagnose
-        </button>
-        <button id="clear-btn" onclick="resetApp()"
-          class="flex items-center justify-center gap-3 py-4 bg-zinc-900 border border-zinc-800 rounded-2xl font-bold text-zinc-500 hover:text-white transition-all">
-          <i data-lucide="refresh-cw" class="w-5 h-5"></i>
-          Reset Session
-        </button>
-      </div>
-      <div id="result-card"
-        class="hidden glass rounded-2xl p-8 border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent">
-        <div class="flex flex-col md:flex-row gap-8 items-start">
-          <div class="flex-1 space-y-4">
-            <div
-              class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase">
-              Diagnosis Complete
-            </div>
-            <h2 id="result-title" class="syne text-4xl font-800 text-white leading-tight">...</h2>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="p-4 bg-white/5 rounded-xl border border-white/10">
-                <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Confidence</p>
-                <p id="result-confidence" class="text-2xl font-bold text-emerald-400">0%</p>
-              </div>
-              <div class="p-4 bg-white/5 rounded-xl border border-white/10">
-                <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Status</p>
-                <p id="result-status" class="text-2xl font-bold text-white">Detecting...</p>
-              </div>
-            </div>
-            <p id="result-treatment"
-              class="text-zinc-400 leading-relaxed italic border-l-2 border-emerald-500 pl-4 py-1">...</p>
-          </div>
-          <div class="w-full md:w-64 h-64 rounded-xl overflow-hidden border border-white/10 shadow-lg">
-            <img id="result-img" src="" class="w-full h-full object-cover">
-          </div>
-        </div>
-      </div>
-    </section>
-    <aside class="lg:col-span-4 space-y-6">
-      <div class="glass rounded-2xl border border-white/5 flex flex-col h-[700px]">
-        <div class="p-6 border-b border-white/5 flex items-center justify-between">
-          <h3 class="syne text-lg font-bold">Activity Log</h3>
-          <span id="log-count" class="text-[10px] px-2 py-0.5 bg-zinc-800 rounded-full font-bold text-zinc-400">0
-            items</span>
-        </div>
-        <div id="history-container" class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
-          <div class="flex flex-col items-center justify-center h-full opacity-20 text-center px-8">
-            <i data-lucide="history" class="w-12 h-12 mb-4"></i>
-            <p class="text-sm font-medium">Diagnostic history will appear here after analysis.</p>
-          </div>
-        </div>
-        <div class="p-4 border-t border-white/5 bg-zinc-950/50 rounded-b-2xl">
-          <div class="flex items-center gap-3 text-[11px] font-bold text-zinc-500">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-            Encrypted Cloud Sync Active
-          </div>
-        </div>
-      </div>
-    </aside>
-  </main>
-  <div id="loader"
-    class="fixed inset-0 z-[100] bg-zinc-950/80 backdrop-blur-md hidden flex items-center justify-center">
-    <div class="text-center">
-      <div class="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4">
-      </div>
-      <p class="syne text-xl font-bold text-emerald-400 animate-pulse">Running Neural Engine...</p>
+    <div style="display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:11px;font-weight:700;color:#10b981;letter-spacing:0.4px">
+      <span style="width:7px;height:7px;background:#10b981;border-radius:50%" class="pulse-em"></span>
+      AI Engine Online
     </div>
   </div>
-  <canvas id="internal-canvas" class="hidden"></canvas>
-  <script>
-    const apiKey = "";
-    let stream = null;
-    let currentMode = 'camera';
-    let history = [];
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('internal-canvas');
-    function setView(mode) {
-      currentMode = mode;
-      document.getElementById('camera-view').classList.toggle('hidden', mode !== 'camera');
-      document.getElementById('upload-view').classList.toggle('hidden', mode !== 'upload');
-      const btnCam = document.getElementById('btn-camera');
-      const btnUp = document.getElementById('btn-upload');
-      if (mode === 'camera') {
-        btnCam.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all bg-emerald-500 text-zinc-950 shadow-lg";
-        btnUp.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all text-zinc-400 hover:text-white";
-      } else {
-        btnUp.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all bg-emerald-500 text-zinc-950 shadow-lg";
-        btnCam.className = "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all text-zinc-400 hover:text-white";
-      }
-      updateActionButtons();
-    }
-    async function initCamera() {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        video.srcObject = stream;
-        document.getElementById('cam-placeholder').classList.add('hidden');
-        updateActionButtons();
-      } catch (e) {
-        alert("Camera permission denied. Please enable camera to use live diagnostics.");
-      }
-    }
-    function handleFileUpload(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = document.getElementById('upload-preview');
-        img.src = event.target.result;
-        img.classList.remove('hidden');
-        updateActionButtons();
-      };
-      reader.readAsDataURL(file);
-    }
-    function updateActionButtons() {
-      const btn = document.getElementById('analyze-btn');
-      if (currentMode === 'camera') {
-        btn.disabled = !stream;
-        btn.innerHTML = `<i data-lucide="zap" class="w-5 h-5"></i> Capture & Diagnose`;
-        btn.className = !stream ? "flex items-center justify-center gap-3 py-4 bg-zinc-800 border border-zinc-700 rounded-2xl font-bold text-zinc-400 opacity-50 cursor-not-allowed transition-all" : "flex items-center justify-center gap-3 py-4 bg-emerald-500/10 border border-emerald-500/50 rounded-2xl font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all";
-      } else {
-        const hasFile = !!document.getElementById('file-input').files[0];
-        btn.disabled = !hasFile;
-        btn.innerHTML = `<i data-lucide="search" class="w-5 h-5"></i> Analyze Upload`;
-        btn.className = !hasFile ? "flex items-center justify-center gap-3 py-4 bg-zinc-800 border border-zinc-700 rounded-2xl font-bold text-zinc-400 opacity-50 cursor-not-allowed transition-all" : "flex items-center justify-center gap-3 py-4 bg-emerald-500/10 border border-emerald-500/50 rounded-2xl font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all";
-      }
-      lucide.createIcons();
-    }
-    async function startAnalysis() {
-      document.getElementById('loader').classList.remove('hidden');
-      document.getElementById('scan-overlay').classList.remove('hidden');
-      let imageData;
-      if (currentMode === 'camera') {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        imageData = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-      } else {
-        const file = document.getElementById('file-input').files[0];
-        imageData = await fileToBase64(file);
-      }
-      try {
-        const diagnosis = await getAIDiagnosis(imageData);
-        displayResult(diagnosis, imageData);
-      } catch (error) {
-        alert("Analysis failed. Please check connection and try again.");
-      } finally {
-        document.getElementById('loader').classList.add('hidden');
-        document.getElementById('scan-overlay').classList.add('hidden');
-      }
-    }
-    async function getAIDiagnosis(base64Image) {
-      const prompt = "Act as a pro agronomist. Analyze this plant image. Identify the plant species and its health status. If diseased, identify the disease and give a concise 1-sentence organic treatment. Return JSON: { \"plant\": \"Name\", \"status\": \"Healthy/Disease Name\", \"confidence\": 0.XX, \"treatment\": \"...\" }";
-      const payload = {
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType: "image/jpeg", data: base64Image } }
-          ]
-        }]
-      };
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-      let retries = 0;
-      while (retries < 5) {
-        try {
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          const data = await response.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          const jsonMatch = text.match(/\{.*\}/s);
-          return JSON.parse(jsonMatch[0]);
-        } catch (e) {
-          retries++;
-          await new Promise(r => setTimeout(r, Math.pow(2, retries) * 1000));
-        }
-      }
-      throw new Error("API Max retries reached");
-    }
-    function displayResult(data, base64) {
-      const card = document.getElementById('result-card');
-      card.classList.remove('hidden');
-      document.getElementById('result-title').textContent = data.plant;
-      document.getElementById('result-confidence').textContent = Math.round(data.confidence * 100) + '%';
-      document.getElementById('result-status').textContent = data.status;
-      document.getElementById('result-treatment').textContent = data.treatment;
-      document.getElementById('result-img').src = `data:image/jpeg;base64,${base64}`;
-      const isHealthy = data.status.toLowerCase().includes('healthy');
-      document.getElementById('result-status').className = isHealthy ? "text-2xl font-bold text-emerald-400" : "text-2xl font-bold text-rose-400";
-      addToHistory(data);
-      card.scrollIntoView({ behavior: 'smooth' });
-    }
-    function addToHistory(data) {
-      const item = { ...data, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-      history.unshift(item);
-      const container = document.getElementById('history-container');
-      if (history.length === 1) container.innerHTML = '';
-      const el = document.createElement('div');
-      el.className = "p-4 glass rounded-xl border border-white/5 animate-in slide-in-from-right-4 transition-all hover:bg-white/5 cursor-pointer shimmer";
-      const isHealthy = data.status.toLowerCase().includes('healthy');
-      el.innerHTML = `
-<div class="flex items-center justify-between mb-2">
-<span class="text-xs font-bold text-zinc-500 uppercase tracking-tighter">${item.time}</span>
-<span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${isHealthy ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}">${data.status}</span>
-</div>
-<h4 class="font-bold text-sm text-white">${data.plant}</h4>
-<div class="mt-2 w-full bg-zinc-800 h-1 rounded-full overflow-hidden">
-<div class="h-full bg-emerald-500" style="width: ${data.confidence * 100}%"></div>
-</div>
-`;
-      container.prepend(el);
-      document.getElementById('log-count').textContent = `${history.length} items`;
-    }
-    function resetApp() {
-      document.getElementById('result-card').classList.add('hidden');
-      document.getElementById('upload-preview').classList.add('hidden');
-      document.getElementById('file-input').value = '';
-      updateActionButtons();
-    }
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = error => reject(error);
-      });
-    }
-    window.onload = () => {
-      lucide.createIcons();
-    };
-  </script>
-</body>
+</nav>
 
+<!-- MAIN -->
+
+<div class="wrap" style="max-width:1280px;margin:0 auto;padding:24px 20px">
+  <div class="main-grid" style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start">
+
+```
+<!-- LEFT -->
+<div style="display:flex;flex-direction:column;gap:18px">
+
+  <!-- TABS -->
+  <div style="display:flex;padding:4px;background:#18181b;border-radius:12px;width:fit-content;border:1px solid #27272a;gap:3px">
+    <button onclick="setView('camera')" id="btn-camera" style="padding:9px 22px;border-radius:9px;font-size:13px;font-weight:700;border:none;cursor:pointer;transition:all 0.2s;background:#10b981;color:#052e16">Live Camera</button>
+    <button onclick="setView('upload')" id="btn-upload" style="padding:9px 22px;border-radius:9px;font-size:13px;font-weight:700;border:none;cursor:pointer;transition:all 0.2s;background:transparent;color:#71717a">Upload Image</button>
+  </div>
+
+  <!-- VIEWPORT CARD -->
+  <div style="border-radius:20px;overflow:hidden;background:#09090b;border:1px solid #27272a;position:relative">
+
+    <!-- CAMERA VIEW -->
+    <div id="camera-view" style="aspect-ratio:16/10;position:relative;background:#09090b">
+      <video id="video" style="width:100%;height:100%;object-fit:cover;display:block" autoplay playsinline muted></video>
+      <canvas id="canvas" style="display:none"></canvas>
+
+      <!-- scan overlay -->
+      <div id="scan-overlay" style="display:none;position:absolute;inset:0;pointer-events:none">
+        <div class="scanner-line"></div>
+        <div class="corner c-tl"></div>
+        <div class="corner c-tr"></div>
+        <div class="corner c-bl"></div>
+        <div class="corner c-br"></div>
+      </div>
+
+      <!-- placeholder -->
+      <div id="cam-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(9,9,11,0.85);backdrop-filter:blur(4px)">
+        <div style="width:72px;height:72px;background:#27272a;border-radius:18px;display:flex;align-items:center;justify-content:center;border:1px solid #3f3f46;margin-bottom:16px">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="7" width="20" height="15" rx="2"/><circle cx="12" cy="14.5" r="3"/><path d="M16 3l-4 4-4-4"/><line x1="2" y1="2" x2="22" y2="22" stroke="#f87171"/></svg>
+        </div>
+        <p style="color:#71717a;font-size:14px;font-weight:600;margin-bottom:16px">Camera access required</p>
+        <button onclick="initCamera()" style="padding:11px 28px;background:#10b981;color:#052e16;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Initialize Feed</button>
+      </div>
+    </div>
+
+    <!-- UPLOAD VIEW -->
+    <div id="upload-view" style="display:none;aspect-ratio:16/10;position:relative;background:#18181b;cursor:pointer" onclick="document.getElementById('file-input').click()">
+      <div id="drop-ui" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border:2px dashed #3f3f46;border-radius:0;transition:border-color 0.2s">
+        <div style="width:68px;height:68px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:16px;display:flex;align-items:center;justify-content:center">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div style="text-align:center">
+          <p style="font-size:15px;font-weight:700;color:#fafafa;margin-bottom:4px">Drop plant image here</p>
+          <p style="font-size:12px;color:#71717a">JPG · PNG · WEBP · up to 10MB</p>
+        </div>
+      </div>
+      <img id="upload-preview" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+      <input type="file" id="file-input" style="display:none" accept="image/*" onchange="handleFileUpload(event)">
+    </div>
+
+  </div>
+
+  <!-- ACTION BUTTONS -->
+  <div class="action-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <button id="analyze-btn" disabled onclick="startAnalysis()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:#18181b;border:1px solid #3f3f46;border-radius:14px;font-size:14px;font-weight:700;color:#71717a;cursor:not-allowed;font-family:inherit;opacity:0.5;transition:all 0.2s">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M20.94 11A9 9 0 1 1 12 3"/></svg>
+      Capture & Diagnose
+    </button>
+    <button id="live-btn" disabled onclick="toggleLive()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:#18181b;border:1px solid #3f3f46;border-radius:14px;font-size:14px;font-weight:700;color:#71717a;cursor:not-allowed;font-family:inherit;opacity:0.5;transition:all 0.2s">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/></svg>
+      Start Live Stream
+    </button>
+    <button onclick="resetApp()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:#18181b;border:1px solid #27272a;border-radius:14px;font-size:14px;font-weight:700;color:#52525b;cursor:pointer;font-family:inherit;transition:all 0.2s;grid-column:span 2" onmouseover="this.style.color='#fafafa'" onmouseout="this.style.color='#52525b'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3"/></svg>
+      Reset Session
+    </button>
+  </div>
+
+  <!-- RESULT CARD -->
+  <div id="result-card" style="display:none;border-radius:18px;padding:28px;background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.2)" class="fade-up">
+    <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:#10b981;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-bottom:18px">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="#10b981"><polyline points="20 6 9 17 4 12"/></svg>
+      DIAGNOSIS COMPLETE
+    </div>
+    <div class="result-inner" style="display:flex;gap:24px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <h2 id="result-title" class="syne" style="font-size:clamp(24px,5vw,36px);font-weight:800;letter-spacing:-0.8px;color:#fafafa;margin-bottom:18px">—</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">
+          <div style="padding:16px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.07)">
+            <p style="font-size:10px;color:#52525b;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:6px">Confidence</p>
+            <p id="result-confidence" class="syne" style="font-size:26px;font-weight:800;color:#10b981">—</p>
+          </div>
+          <div style="padding:16px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.07)">
+            <p style="font-size:10px;color:#52525b;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:6px">Status</p>
+            <p id="result-status" class="syne" style="font-size:22px;font-weight:800;color:#fafafa">—</p>
+          </div>
+        </div>
+        <div id="result-treatment-wrap" style="padding:14px 16px;border-left:3px solid #10b981;border-radius:0 8px 8px 0;background:rgba(255,255,255,0.03)">
+          <p id="result-treatment" style="font-size:13px;color:#a1a1aa;line-height:1.7;font-style:italic">—</p>
+        </div>
+        <p id="result-ts" style="font-size:11px;color:#3f3f46;margin-top:10px">—</p>
+      </div>
+      <div class="result-img-wrap" style="width:200px;height:200px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);flex-shrink:0">
+        <img id="result-img" src="" style="width:100%;height:100%;object-fit:cover;display:none">
+        <div id="result-img-placeholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#18181b">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3f3f46" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- RIGHT — HISTORY -->
+<aside class="aside-col" style="position:sticky;top:74px">
+  <div class="glass" style="border-radius:18px;display:flex;flex-direction:column;height:680px">
+    <div style="padding:18px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <span class="syne" style="font-size:15px;font-weight:800;color:#fafafa">Activity Log</span>
+      <span id="log-count" style="font-size:11px;font-weight:700;padding:3px 10px;background:#27272a;border-radius:999px;color:#71717a">0 items</span>
+    </div>
+    <div id="history-container" class="no-scrollbar" style="flex:1;overflow-y:auto;padding:12px">
+      <div id="history-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;opacity:0.25">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <p style="font-size:13px;font-weight:600;text-align:center">Diagnostic history<br>appears here after analysis</p>
+      </div>
+    </div>
+    <div style="padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);border-radius:0 0 18px 18px;background:rgba(9,9,11,0.4);flex-shrink:0;display:flex;align-items:center;gap:8px">
+      <span style="width:7px;height:7px;background:#10b981;border-radius:50%;flex-shrink:0" class="pulse-em"></span>
+      <span id="sync-txt" style="font-size:11px;font-weight:600;color:#52525b">Waiting for first scan...</span>
+    </div>
+  </div>
+</aside>
+```
+
+  </div>
+</div>
+
+<!-- LOADER OVERLAY -->
+
+<div id="loader" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(9,9,11,0.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <svg class="spin" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+  <p class="syne" style="font-size:18px;font-weight:800;color:#10b981;letter-spacing:-0.3px">Analyzing...</p>
+  <p style="font-size:13px;color:#71717a">Running AI inference engine</p>
+</div>
+
+<script>
+let stream=null, liveInt=null, isLive=false, histCount=0, currentView='camera';
+const video=document.getElementById('video');
+const canvas=document.getElementById('canvas');
+
+function setView(mode){
+  currentView=mode;
+  document.getElementById('camera-view').style.display=mode==='camera'?'block':'none';
+  document.getElementById('upload-view').style.display=mode==='upload'?'flex':'none';
+  const bc=document.getElementById('btn-camera');
+  const bu=document.getElementById('btn-upload');
+  if(mode==='camera'){
+    bc.style.background='#10b981';bc.style.color='#052e16';
+    bu.style.background='transparent';bu.style.color='#71717a';
+  } else {
+    bu.style.background='#10b981';bu.style.color='#052e16';
+    bc.style.background='transparent';bc.style.color='#71717a';
+  }
+  refreshBtns();
+}
+
+async function initCamera(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    video.srcObject=stream;
+    document.getElementById('cam-placeholder').style.display='none';
+    refreshBtns();
+  }catch(e){
+    alert('Camera permission denied. Please allow and try again.');
+  }
+}
+
+function refreshBtns(){
+  const ab=document.getElementById('analyze-btn');
+  const lb=document.getElementById('live-btn');
+  const camReady=currentView==='camera'&&stream;
+  const upReady=currentView==='upload'&&document.getElementById('file-input').files[0];
+  const canAnalyze=camReady||upReady;
+
+  ab.disabled=!canAnalyze;
+  ab.style.opacity=canAnalyze?'1':'0.4';
+  ab.style.cursor=canAnalyze?'pointer':'not-allowed';
+  if(canAnalyze){
+    ab.style.background='rgba(16,185,129,0.1)';
+    ab.style.borderColor='rgba(16,185,129,0.4)';
+    ab.style.color='#10b981';
+  } else {
+    ab.style.background='#18181b';
+    ab.style.borderColor='#3f3f46';
+    ab.style.color='#71717a';
+  }
+  ab.innerHTML=currentView==='camera'
+    ?`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M20.94 11A9 9 0 1 1 12 3"/></svg> Capture & Diagnose`
+    :`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Run Diagnosis`;
+
+  lb.disabled=!camReady;
+  lb.style.opacity=camReady?'1':'0.4';
+  lb.style.cursor=camReady?'pointer':'not-allowed';
+  lb.style.display=currentView==='camera'?'flex':'none';
+}
+
+function handleFileUpload(e){
+  const file=e.target.files[0];if(!file)return;
+  const url=URL.createObjectURL(file);
+  const img=document.getElementById('upload-preview');
+  img.src=url;img.style.display='block';
+  document.getElementById('drop-ui').style.display='none';
+  refreshBtns();
+}
+
+function captureFrame(){
+  canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+  return new Promise(r=>canvas.toBlob(r,'image/jpeg',0.92));
+}
+
+async function startAnalysis(){
+  showLoader(true);
+  let blob,previewSrc;
+  if(currentView==='camera'){
+    blob=await captureFrame();
+    previewSrc=URL.createObjectURL(blob);
+  } else {
+    blob=document.getElementById('file-input').files[0];
+    previewSrc=URL.createObjectURL(blob);
+  }
+  const result=await callAPI(blob);
+  showLoader(false);
+  displayResult(result,previewSrc);
+  loadHistory();
+}
+
+function toggleLive(){
+  isLive=!isLive;
+  const btn=document.getElementById('live-btn');
+  const badge=document.getElementById('liveBadge');
+  const overlay=document.getElementById('scan-overlay');
+  if(isLive){
+    btn.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" stroke="none"/></svg> Stop Live`;
+    btn.style.background='rgba(248,113,113,0.1)';
+    btn.style.borderColor='rgba(248,113,113,0.3)';
+    btn.style.color='#f87171';
+    badge.classList.add('show');
+    overlay.style.display='block';
+    liveInt=setInterval(async()=>{
+      const blob=await captureFrame();
+      const r=await callAPI(blob);
+      displayResult(r,URL.createObjectURL(blob));
+      loadHistory();
+    },5000);
+  } else {
+    btn.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/></svg> Start Live Stream`;
+    btn.style.background='rgba(16,185,129,0.1)';
+    btn.style.borderColor='rgba(16,185,129,0.4)';
+    btn.style.color='#10b981';
+    badge.classList.remove('show');
+    overlay.style.display='none';
+    clearInterval(liveInt);liveInt=null;
+  }
+}
+
+async function callAPI(blob){
+  const fd=new FormData();
+  fd.append('file',blob,'image.jpg');
+  try{
+    const res=await fetch('/predict',{method:'POST',body:fd});
+    return await res.json();
+  }catch(e){
+    return{error:'Server unreachable. Wake Render and retry.'};
+  }
+}
+
+function showLoader(v){
+  const el=document.getElementById('loader');
+  el.style.display=v?'flex':'none';
+}
+
+const TREATMENT={
+  Healthy:'Plant appears healthy. Continue current care routine and monitor regularly.',
+  Blight:'Apply copper-based fungicide. Remove and destroy infected leaves immediately. Avoid overhead watering.',
+  Common_Rust:'Use sulfur-based fungicide. Ensure good air circulation. Remove infected debris.',
+  Gray_Leaf_Spot:'Apply triazole fungicide. Rotate crops to reduce soil-borne spores.'
+};
+
+const COLOR={
+  Healthy:'#10b981',
+  Blight:'#f87171',
+  Common_Rust:'#fb923c',
+  Gray_Leaf_Spot:'#a78bfa'
+};
+
+function displayResult(r,imgSrc){
+  if(r.error){
+    alert(r.error);return;
+  }
+  const d=r.disease;
+  const conf=(r.confidence*100).toFixed(1);
+  const ts=r.timestamp?r.timestamp.replace('T',' ').slice(0,19):'';
+  const col=COLOR[d]||'#10b981';
+
+  document.getElementById('result-card').style.display='block';
+  document.getElementById('result-card').className='fade-up';
+  document.getElementById('result-card').style.borderColor=col+'44';
+  document.getElementById('result-card').style.background=col+'08';
+
+  document.getElementById('result-title').textContent=d.replace(/_/g,' ');
+  document.getElementById('result-title').style.color=col;
+  document.getElementById('result-confidence').textContent=conf+'%';
+  document.getElementById('result-confidence').style.color=col;
+  document.getElementById('result-status').textContent=d==='Healthy'?'Healthy':'Diseased';
+  document.getElementById('result-status').style.color=col;
+  document.getElementById('result-treatment').textContent=TREATMENT[d]||'Monitor plant closely.';
+  document.getElementById('result-treatment-wrap').style.borderLeftColor=col;
+  document.getElementById('result-ts').textContent=ts?'Scanned at '+ts:'';
+
+  const img=document.getElementById('result-img');
+  const ph=document.getElementById('result-img-placeholder');
+  if(imgSrc){img.src=imgSrc;img.style.display='block';ph.style.display='none';}
+
+  document.getElementById('result-card').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function loadHistory(){
+  try{
+    const res=await fetch('/results');
+    const data=await res.json();
+    if(!data.data||data.data.length===0)return;
+    const container=document.getElementById('history-container');
+    document.getElementById('history-empty').style.display='none';
+    histCount=data.data.length;
+    document.getElementById('log-count').textContent=`${histCount} item${histCount!==1?'s':''}`;
+    container.innerHTML=data.data.slice(0,15).map(r=>{
+      const d=r[2],conf=(r[3]*100).toFixed(0);
+      const col=COLOR[d]||'#10b981';
+      const t=r[1].replace('T',' ');
+      return `<div class="slide-in" style="padding:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;margin-bottom:8px;transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:8px;height:8px;background:${col};border-radius:50%;flex-shrink:0"></span>
+            <span style="font-size:13px;font-weight:700;color:${col}">${d.replace(/_/g,' ')}</span>
+          </div>
+          <span style="font-size:10px;color:#3f3f46">${t.slice(11,16)}</span>
+        </div>
+        <div style="width:100%;height:3px;background:#27272a;border-radius:999px;margin-bottom:5px;overflow:hidden">
+          <div style="height:100%;width:${conf}%;background:${col};border-radius:999px;transition:width 0.6s ease"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="font-size:11px;color:#52525b">${conf}% confidence</span>
+          <span style="font-size:10px;color:#3f3f46">${t.slice(0,10)}</span>
+        </div>
+      </div>`;
+    }).join('');
+    document.getElementById('sync-txt').textContent='Synced '+new Date().toLocaleTimeString();
+  }catch(e){
+    document.getElementById('sync-txt').textContent='Offline';
+  }
+}
+
+function resetApp(){
+  document.getElementById('result-card').style.display='none';
+  document.getElementById('upload-preview').style.display='none';
+  document.getElementById('drop-ui').style.display='flex';
+  document.getElementById('file-input').value='';
+  if(isLive)toggleLive();
+  refreshBtns();
+}
+
+loadHistory();
+setInterval(loadHistory,15000);
+</script>
+
+</body>
 </html>
