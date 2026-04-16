@@ -286,6 +286,9 @@ input[type=text]:focus{border-color:#10b981}
 
 <script>
 const COLOR={Healthy:'#10b981',Blight:'#f87171',Common_Rust:'#fb923c',Gray_Leaf_Spot:'#a78bfa'};
+function fmtTime(r){if(!r)return'—';const d=new Date(r.endsWith('Z')?r:r+'Z');return isNaN(d)?r:d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:true});}
+function fmtDate(r){if(!r)return'—';const d=new Date(r.endsWith('Z')?r:r+'Z');return isNaN(d)?r:d.toLocaleDateString([],{day:'2-digit',month:'short'});}
+function fmtFull(r){if(!r)return'—';const d=new Date(r.endsWith('Z')?r:r+'Z');return isNaN(d)?r:d.toLocaleString([],{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});}
 const TREAT={
   Healthy:'Plant appears healthy. Continue current care and monitor regularly.',
   Blight:'Apply copper-based fungicide. Remove infected leaves. Avoid overhead watering.',
@@ -293,21 +296,7 @@ const TREAT={
   Gray_Leaf_Spot:'Apply triazole fungicide. Rotate crops to reduce soil-borne spores.'
 };
 
-let stream=null,liveInt=null,isLive=false,currentView='camera',renameTarget=null,currentDeviceId=null;
-
-function formatTime(isoStr){
-  if(!isoStr)return'—';
-  const d=new Date(isoStr);
-  if(isNaN(d.getTime()))return'Invalid';
-  return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' • '+d.toLocaleDateString([],{month:'short',day:'numeric'});
-}
-
-function formatDate(isoStr){
-  if(!isoStr)return'—';
-  const d=new Date(isoStr);
-  if(isNaN(d.getTime()))return'Invalid';
-  return d.toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'});
-}
+let stream=null,liveInt=null,isLive=false,currentView='camera',renameTarget=null;
 
 function goPage(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
@@ -340,7 +329,7 @@ async function loadDevices(){
 }
 
 function buildNodeCard(d){
-  const last=d.last_seen?formatTime(d.last_seen):'Never';
+  const last=d.last_seen?fmtTime(d.last_seen)+' • '+fmtDate(d.last_seen):'Never';
   return `<div class="node-card ${d.online?'online':''}" onclick="openNodeDetail('${d.device_id}')">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:10px;min-width:0">
@@ -396,41 +385,15 @@ async function loadAllActivity(){
           </div>
           <span style="font-size:11px;color:#52525b">${conf}% confidence</span>
         </div>
-        <span style="font-size:11px;color:#3f3f46;flex-shrink:0;text-align:right">${formatTime(t)}</span>
+        <span style="font-size:11px;color:#3f3f46;flex-shrink:0;text-align:right">${fmtTime(t)}<br><span style="font-size:10px">${fmtDate(t)}</span></span>
       </div>`;
     }).join('');
     document.getElementById('all-sync').textContent='Synced '+new Date().toLocaleTimeString();
   }catch(e){document.getElementById('all-sync').textContent='Offline'}
 }
 
-async function openNodeDetail(deviceId){
-  currentDeviceId=deviceId;
+function openNodeDetail(deviceId){
   goPage('camera');
-  await loadHistory(deviceId);
-  // Load last result for this device and display it
-  try{
-    const res=await fetch(`/results?device_id=${deviceId}`);
-    const data=await res.json();
-    if(data.data&&data.data.length>0){
-      const last=data.data[0];
-      const d=last[2],conf=(last[3]*100).toFixed(1),col=COLOR[d]||'#10b981';
-      const ts=last[1]?formatTime(last[1]):'';
-      document.getElementById('result-card').style.display='block';
-      document.getElementById('result-card').style.borderColor=col+'44';
-      document.getElementById('result-card').style.background=col+'08';
-      document.getElementById('result-title').textContent=d.replace(/_/g,' ');
-      document.getElementById('result-title').style.color=col;
-      document.getElementById('result-confidence').textContent=conf+'%';
-      document.getElementById('result-confidence').style.color=col;
-      document.getElementById('result-status').textContent=d==='Healthy'?'Healthy':'Diseased';
-      document.getElementById('result-status').style.color=col;
-      document.getElementById('result-treatment').textContent=TREAT[d]||'Monitor plant closely.';
-      document.getElementById('treat-wrap').style.borderLeftColor=col;
-      document.getElementById('result-ts').textContent=ts?'Scanned at '+ts:'';
-      document.getElementById('result-img').style.display='none';
-      document.getElementById('result-img-ph').style.display='flex';
-    }
-  }catch(e){console.error(e);}
 }
 
 /* ── RENAME MODAL ── */
@@ -559,7 +522,7 @@ async function callAPI(blob,deviceId){
 function displayResult(r,imgSrc){
   if(r.error){alert(r.error);return;}
   const d=r.disease,conf=(r.confidence*100).toFixed(1),col=COLOR[d]||'#10b981';
-  const ts=r.timestamp?formatTime(r.timestamp):'';
+  const ts=r.timestamp?fmtFull(r.timestamp):'';
   document.getElementById('result-card').style.display='block';
   document.getElementById('result-card').style.borderColor=col+'44';
   document.getElementById('result-card').style.background=col+'08';
@@ -578,9 +541,8 @@ function displayResult(r,imgSrc){
 }
 
 async function loadHistory(deviceId){
-  const id=deviceId||currentDeviceId||'browser';
   try{
-    const url=`/results?device_id=${id}`;
+    const url=deviceId?`/results?device_id=${deviceId}`:'/results';
     const res=await fetch(url);const data=await res.json();
     const container=document.getElementById('history-container');
     document.getElementById('history-empty').style.display='none';
@@ -594,14 +556,14 @@ async function loadHistory(deviceId){
             <span style="width:7px;height:7px;background:${col};border-radius:50%;flex-shrink:0"></span>
             <span style="font-size:13px;font-weight:700;color:${col}">${d.replace(/_/g,' ')}</span>
           </div>
-          <span style="font-size:10px;color:#3f3f46">${formatTime(t)}</span>
+          <span style="font-size:10px;color:#3f3f46">${fmtTime(t)}</span>
         </div>
         <div style="width:100%;height:2px;background:#27272a;border-radius:999px;margin-bottom:5px;overflow:hidden">
           <div style="height:100%;width:${conf}%;background:${col};border-radius:999px;transition:width 0.6s ease"></div>
         </div>
         <div style="display:flex;justify-content:space-between">
           <span style="font-size:11px;color:#52525b">${conf}% confidence</span>
-          <span style="font-size:10px;color:#3f3f46">${formatDate(t)}</span>
+          <span style="font-size:10px;color:#3f3f46">${fmtDate(t)}</span>
         </div>
       </div>`;
     }).join('');
@@ -620,7 +582,7 @@ function resetApp(){
 
 loadDevices();
 loadHistory('browser');
-setInterval(()=>{loadDevices();loadHistory(currentDeviceId||'browser');},15000);
+setInterval(()=>{loadDevices();loadHistory('browser');},15000);
 </script>
 </body>
 </html>
