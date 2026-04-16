@@ -52,7 +52,7 @@ def upsert_device(device_id: str):
     cur = con.cursor()
     cur.execute("SELECT device_id FROM devices WHERE device_id=?", (device_id,))
     exists = cur.fetchone()
-    now = datetime.datetime.now().isoformat()
+    now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     if exists:
         cur.execute("UPDATE devices SET last_seen=? WHERE device_id=?", (now, device_id))
     else:
@@ -70,7 +70,7 @@ async def predict(file: UploadFile = File(...), device_id: str = Form("browser")
     predictions = model.predict(img_array)
     disease = class_names[np.argmax(predictions)]
     confidence = float(np.max(predictions))
-    timestamp = datetime.datetime.now().isoformat()
+    timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     con = sqlite3.connect("results.db")
     cur = con.cursor()
     cur.execute("INSERT INTO results (timestamp, disease, confidence, device_id) VALUES (?,?,?,?)",
