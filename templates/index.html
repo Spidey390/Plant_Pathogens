@@ -45,10 +45,14 @@ input[type=text]:focus{border-color:#10b981}
 .color-Blight{color:#f87171}
 .color-Common_Rust{color:#fb923c}
 .color-Gray_Leaf_Spot{color:#a78bfa}
+.color-No\ Leaf{color:#71717a}
+.color-Uncertain{color:#facc15}
 .bar-Healthy{background:#10b981}
 .bar-Blight{background:#f87171}
 .bar-Common_Rust{background:#fb923c}
 .bar-Gray_Leaf_Spot{background:#a78bfa}
+.bar-No\ Leaf{background:#71717a}
+.bar-Uncertain{background:#facc15}
 @media(max-width:1024px){.main-grid{grid-template-columns:1fr!important}}
 @media(max-width:640px){
   .action-grid{grid-template-columns:1fr!important}
@@ -285,7 +289,7 @@ input[type=text]:focus{border-color:#10b981}
 </div>
 
 <script>
-const COLOR={Healthy:'#10b981',Blight:'#f87171',Common_Rust:'#fb923c',Gray_Leaf_Spot:'#a78bfa'};
+const COLOR={Healthy:'#10b981',Blight:'#f87171',Common_Rust:'#fb923c',Gray_Leaf_Spot:'#a78bfa','No Leaf':'#71717a',Uncertain:'#facc15'};
 function fmtTime(r){if(!r)return'—';const d=new Date(r.endsWith('Z')?r:r+'Z');return isNaN(d)?r:d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:true});}
 function fmtDate(r){if(!r)return'—';const d=new Date(r.endsWith('Z')?r:r+'Z');return isNaN(d)?r:d.toLocaleDateString([],{day:'2-digit',month:'short'});}
 function fmtFull(r){if(!r)return'—';const d=new Date(r.endsWith('Z')?r:r+'Z');return isNaN(d)?r:d.toLocaleString([],{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});}

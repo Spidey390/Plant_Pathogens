@@ -5,3 +5,4 @@ numpy
 tensorflow
 python-multipart
 gdown
+opencv-python-headless
