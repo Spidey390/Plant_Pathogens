@@ -482,10 +482,16 @@ function captureFrame(){
 }
 
 async function startAnalysis(){
-  document.getElementById('loader').style.display='flex';
   let blob,previewSrc;
-  if(currentView==='camera'){blob=await captureFrame();previewSrc=URL.createObjectURL(blob);}
-  else{blob=document.getElementById('file-input').files[0];previewSrc=URL.createObjectURL(blob);}
+  if(currentView==='camera'){
+    blob=await captureFrame();
+  } else {
+    blob=document.getElementById('file-input').files[0];
+  }
+  if(!blob) return;
+
+  document.getElementById('loader').style.display='flex';
+  previewSrc=URL.createObjectURL(blob);
   const result=await callAPI(blob,'browser');
   document.getElementById('loader').style.display='none';
   displayResult(result,previewSrc);
@@ -552,13 +558,15 @@ async function loadHistory(deviceId){
     document.getElementById('history-empty').style.display='none';
     document.getElementById('log-count').textContent=`${data.data.length} items`;
     container.innerHTML=data.data.slice(0,15).map(r=>{
-      const d=r[2],conf=(r[3]*100).toFixed(0),col=COLOR[d]||'#10b981';
+      if(!r || r.length < 4) return '';
+      const d=r[2] || 'Uncertain', conf=r[3] ? (r[3]*100).toFixed(0) : '0', col=COLOR[d]||'#facc15';
       const t=r[1];
+      const dName = typeof d === 'string' ? d.replace(/_/g,' ') : 'Uncertain';
       return `<div class="slide-in" style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);border-radius:10px;margin-bottom:7px;transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
           <div style="display:flex;align-items:center;gap:7px">
             <span style="width:7px;height:7px;background:${col};border-radius:50%;flex-shrink:0"></span>
-            <span style="font-size:13px;font-weight:700;color:${col}">${d.replace(/_/g,' ')}</span>
+            <span style="font-size:13px;font-weight:700;color:${col}">${dName}</span>
           </div>
           <span style="font-size:10px;color:#3f3f46">${fmtTime(t)}</span>
         </div>
@@ -572,7 +580,10 @@ async function loadHistory(deviceId){
       </div>`;
     }).join('');
     document.getElementById('sync-txt').textContent='Synced '+new Date().toLocaleTimeString();
-  }catch(e){document.getElementById('sync-txt').textContent='Offline';}
+  }catch(e){
+    console.error('History Sync Error:', e);
+    document.getElementById('sync-txt').textContent='Sync Error';
+  }
 }
 
 function resetApp(){

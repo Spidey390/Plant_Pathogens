@@ -106,11 +106,6 @@ async def predict(file: UploadFile = File(...), device_id: str = Form("browser")
     processed = preprocess_image(img_array)
     predictions = model.predict(processed)
     confidence = float(np.max(predictions))
-    predicted_class = class_names[np.argmax(predictions)]
-    
-    print(f"DEBUG: Prediction: {predicted_class}, Confidence: {confidence:.4f}")
-    print(f"DEBUG: Raw predictions: {predictions[0]}")
-
     if confidence < CONFIDENCE_THRESHOLD:
         return {
             "disease": "Uncertain",
@@ -121,12 +116,23 @@ async def predict(file: UploadFile = File(...), device_id: str = Form("browser")
         }
     disease = class_names[np.argmax(predictions)]
     timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    
     con = sqlite3.connect("results.db")
     cur = con.cursor()
     cur.execute("INSERT INTO results (timestamp, disease, confidence, device_id) VALUES (?,?,?,?)",
                 (timestamp, disease, confidence, device_id))
     con.commit()
     con.close()
+
+    if confidence < CONFIDENCE_THRESHOLD:
+        return {
+            "disease": "Uncertain",
+            "confidence": confidence,
+            "timestamp": timestamp,
+            "device_id": device_id,
+            "message": "Low confidence - point camera to a clear leaf"
+        }
+    
     return {"disease": disease, "confidence": confidence, "timestamp": timestamp, "device_id": device_id}
 
 @app.get("/results")
@@ -171,5 +177,5 @@ def rename_device(device_id: str, name: str = Form(...)):
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard():
-    with open("templates/index.html") as f:
+    with open("templates/index.html", encoding="utf-8") as f:
         return f.read()
