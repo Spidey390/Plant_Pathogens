@@ -13,8 +13,8 @@ import cv2
 MODEL_PATH = "plant_disease_model.h5"
 GDRIVE_FILE_ID = "13e9PTZCsu10q8l0tnRSmQjjL8Kh5h9pK"
 
-CONFIDENCE_THRESHOLD = 0.75
-LEAF_GREEN_RATIO_THRESHOLD = 0.15
+CONFIDENCE_THRESHOLD = 0.45
+LEAF_GREEN_RATIO_THRESHOLD = 0.10
 
 def download_model():
     if not os.path.exists(MODEL_PATH):
@@ -65,8 +65,9 @@ def detect_leaf(img_array):
 
 def preprocess_image(img_array):
     h, w = img_array.shape[:2]
-    x1, y1 = w // 6, h // 6
-    x2, y2 = 5 * w // 6, 5 * h // 6
+    # Reduce crop to capture more context
+    x1, y1 = w // 12, h // 12
+    x2, y2 = 11 * w // 12, 11 * h // 12
     crop = img_array[y1:y2, x1:x2]
     lab = cv2.cvtColor(crop, cv2.COLOR_RGB2LAB)
     lab[:, :, 0] = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(lab[:, :, 0])
@@ -105,6 +106,11 @@ async def predict(file: UploadFile = File(...), device_id: str = Form("browser")
     processed = preprocess_image(img_array)
     predictions = model.predict(processed)
     confidence = float(np.max(predictions))
+    predicted_class = class_names[np.argmax(predictions)]
+    
+    print(f"DEBUG: Prediction: {predicted_class}, Confidence: {confidence:.4f}")
+    print(f"DEBUG: Raw predictions: {predictions[0]}")
+
     if confidence < CONFIDENCE_THRESHOLD:
         return {
             "disease": "Uncertain",
