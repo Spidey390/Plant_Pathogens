@@ -19,3 +19,7 @@ ENV/
 .idea/
 *.swp
 *.swo
+
+Node/secrets.h
+PumpController/secrets.h
+*.db

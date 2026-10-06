@@ -1,10 +1,11 @@
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 import tensorflow as tf
 import numpy as np
 import sqlite3
 import datetime
+from datetime import timedelta
 import io
 import os
 import gdown
@@ -15,6 +16,23 @@ GDRIVE_FILE_ID = "13e9PTZCsu10q8l0tnRSmQjjL8Kh5h9pK"
 
 CONFIDENCE_THRESHOLD = 0.45
 LEAF_GREEN_RATIO_THRESHOLD = 0.10
+
+DB_PATH = "results.db"
+TS_FMT = "%Y-%m-%dT%H:%M:%SZ"
+DEVICE_API_KEY = os.environ.get("DEVICE_API_KEY")  # set on Render; ESP32 sends same value
+
+# disease -> pump/tank. Pump number = relay channel on ESP32.
+TREATMENT_MAP = {
+    "Blight":         {"pump": 1, "tank": "copper fungicide"},
+    "Common_Rust":    {"pump": 2, "tank": "sulfur fungicide"},
+    "Gray_Leaf_Spot": {"pump": 3, "tank": "triazole fungicide"},
+}
+SPRAY_MIN_CONF = 0.70      # stricter than display threshold
+CONFIRM_COUNT = 2          # N consecutive same-disease readings before spraying
+CONFIRM_WINDOW_S = 180     # ...within this window
+SPRAY_DURATION_MS = 3000   # mist burst length
+SPRAY_COOLDOWN_S = 600     # min gap between sprays per device+pump
+SPRAY_TTL_S = 60           # queued command expires if controller doesn't fetch in time
 
 def download_model():
     if not os.path.exists(MODEL_PATH):
@@ -46,6 +64,19 @@ def init_db():
         name TEXT,
         last_seen TEXT
     )""")
+    cur.execute("""CREATE TABLE IF NOT EXISTS sprays (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT,
+        device_id TEXT,
+        disease TEXT,
+        pump INTEGER,
+        duration_ms INTEGER,
+        delivered INTEGER DEFAULT 0
+    )""")
+    try:
+        cur.execute("ALTER TABLE sprays ADD COLUMN delivered INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
     con.commit()
     con.close()
 
@@ -89,8 +120,35 @@ def upsert_device(device_id: str):
     con.commit()
     con.close()
 
+def decide_action(device_id: str, disease: str):
+    """Return spray command or None. Debounce + cooldown. Logs spray when issued."""
+    spec = TREATMENT_MAP.get(disease)
+    if not spec:
+        return None
+    now = datetime.datetime.utcnow()
+    since = (now - timedelta(seconds=CONFIRM_WINDOW_S)).strftime(TS_FMT)
+    cool = (now - timedelta(seconds=SPRAY_COOLDOWN_S)).strftime(TS_FMT)
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("SELECT disease, confidence FROM results WHERE device_id=? AND timestamp>=? "
+                "ORDER BY id DESC LIMIT ?", (device_id, since, CONFIRM_COUNT))
+    rows = cur.fetchall()
+    if len(rows) < CONFIRM_COUNT or any(r[0] != disease or r[1] < SPRAY_MIN_CONF for r in rows):
+        con.close()
+        return None
+    cur.execute("SELECT 1 FROM sprays WHERE device_id=? AND pump=? AND timestamp>=? LIMIT 1",
+                (device_id, spec["pump"], cool))
+    if cur.fetchone():
+        con.close()
+        return None
+    cur.execute("INSERT INTO sprays (timestamp, device_id, disease, pump, duration_ms) VALUES (?,?,?,?,?)",
+                (now.strftime(TS_FMT), device_id, disease, spec["pump"], SPRAY_DURATION_MS))
+    con.commit()
+    con.close()
+    return {"pump": spec["pump"], "tank": spec["tank"], "duration_ms": SPRAY_DURATION_MS}
+
 @app.post("/predict")
-async def predict(file: UploadFile = File(...), device_id: str = Form("browser")):
+async def predict(file: UploadFile = File(...), device_id: str = Form("browser"), api_key: str = Form("")):
     upsert_device(device_id)
     contents = await file.read()
     img_pil = Image.open(io.BytesIO(contents)).convert("RGB")
@@ -124,16 +182,13 @@ async def predict(file: UploadFile = File(...), device_id: str = Form("browser")
     con.commit()
     con.close()
 
-    if confidence < CONFIDENCE_THRESHOLD:
-        return {
-            "disease": "Uncertain",
-            "confidence": confidence,
-            "timestamp": timestamp,
-            "device_id": device_id,
-            "message": "Low confidence - point camera to a clear leaf"
-        }
-    
-    return {"disease": disease, "confidence": confidence, "timestamp": timestamp, "device_id": device_id}
+    # Only real ESP32 nodes may actuate pumps (browser scans never spray).
+    action = None
+    if device_id != "browser" and DEVICE_API_KEY and api_key == DEVICE_API_KEY:
+        action = decide_action(device_id, disease)
+
+    return {"disease": disease, "confidence": confidence, "timestamp": timestamp,
+            "device_id": device_id, "action": action}
 
 @app.get("/results")
 def get_results(device_id: str = None):
@@ -143,6 +198,35 @@ def get_results(device_id: str = None):
         cur.execute("SELECT * FROM results WHERE device_id=? ORDER BY id DESC LIMIT 20", (device_id,))
     else:
         cur.execute("SELECT * FROM results ORDER BY id DESC LIMIT 20")
+    rows = cur.fetchall()
+    con.close()
+    return {"data": rows}
+
+@app.post("/pump/next")
+def pump_next(device_id: str = Form(...), api_key: str = Form("")):
+    """Pump controller polls this. Returns oldest fresh undelivered spray for device_id, marks delivered."""
+    if not DEVICE_API_KEY or api_key != DEVICE_API_KEY:
+        raise HTTPException(status_code=401, detail="bad api key")
+    fresh = (datetime.datetime.utcnow() - timedelta(seconds=SPRAY_TTL_S)).strftime(TS_FMT)
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("SELECT id, pump, duration_ms FROM sprays WHERE device_id=? AND delivered=0 "
+                "AND timestamp>=? ORDER BY id LIMIT 1", (device_id, fresh))
+    row = cur.fetchone()
+    if row:
+        cur.execute("UPDATE sprays SET delivered=1 WHERE id=?", (row[0],))
+    cur.execute("UPDATE sprays SET delivered=2 WHERE delivered=0 AND timestamp<?", (fresh,))  # expired
+    con.commit()
+    con.close()
+    if not row:
+        return {"action": None}
+    return {"action": {"pump": row[1], "duration_ms": row[2]}}
+
+@app.get("/sprays")
+def get_sprays():
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("SELECT * FROM sprays ORDER BY id DESC LIMIT 50")
     rows = cur.fetchall()
     con.close()
     return {"data": rows}

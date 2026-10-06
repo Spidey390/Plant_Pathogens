@@ -2,15 +2,14 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
-#include "FS.h"
-#include "SD_MMC.h"
 
-const char* ssid = "Spidey’s iPhone";
-const char* password = "9344075202";
+#include "secrets.h"   // defines WIFI_SSID, WIFI_PASS, API_KEY (gitignored)
+
+const char* ssid = WIFI_SSID;
+const char* password = WIFI_PASS;
 const char* serverUrl = "https://plant-pathogens-detection.onrender.com/predict";
 const char* deviceId = "ESP32-CAM-01";
 const int interval = 30000;
-int photoCount = 0;
 
 #define PWDN_GPIO_NUM     32
 #define RESET_GPIO_NUM    -1
@@ -68,20 +67,6 @@ void initCamera() {
   Serial.println("Camera OK");
 }
 
-void initSDCard() {
-  pinMode(4, OUTPUT);
-  digitalWrite(4, LOW);
-  if (!SD_MMC.begin("/sdcard", true)) {
-    Serial.println("SD Card Mount Failed - continuing without SD");
-    return;
-  }
-  if (SD_MMC.cardType() == CARD_NONE) {
-    Serial.println("No SD Card attached");
-    return;
-  }
-  Serial.println("SD Card OK");
-}
-
 void connectToWiFi() {
   Serial.print("Connecting to WiFi");
   WiFi.begin(ssid, password);
@@ -107,16 +92,6 @@ void captureAndSendPhoto() {
     return;
   }
 
-  String path = "/photo_" + String(photoCount++) + ".jpg";
-  File file = SD_MMC.open(path.c_str(), FILE_WRITE);
-  if (file) {
-    file.write(fb->buf, fb->len);
-    file.close();
-    Serial.println("Saved: " + path);
-  } else {
-    Serial.println("SD save skipped");
-  }
-
   if (WiFi.status() == WL_CONNECTED) {
     WiFiClientSecure client;
     client.setInsecure();
@@ -135,6 +110,9 @@ void captureAndSendPhoto() {
     String devicePart = "\r\n--" + boundary + "\r\n"
                       + "Content-Disposition: form-data; name=\"device_id\"\r\n\r\n"
                       + String(deviceId)
+                      + "\r\n--" + boundary + "\r\n"
+                      + "Content-Disposition: form-data; name=\"api_key\"\r\n\r\n"
+                      + String(API_KEY)
                       + "\r\n--" + boundary + "--\r\n";
 
     int totalLen = filePart.length() + fb->len + devicePart.length();
@@ -176,7 +154,6 @@ void setup() {
   delay(1000);
   Serial.println("Booting...");
   initCamera();
-  initSDCard();
   connectToWiFi();
   Serial.println("Waking up Render server...");
   WiFiClientSecure warmup;
