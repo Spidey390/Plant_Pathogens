@@ -222,6 +222,23 @@ def pump_next(device_id: str = Form(...), api_key: str = Form("")):
         return {"action": None}
     return {"action": {"pump": row[1], "duration_ms": row[2]}}
 
+@app.post("/pump/test")
+def pump_test(pump: int = Form(...), duration_ms: int = Form(1000),
+              device_id: str = Form("ESP32-CAM-01"), api_key: str = Form("")):
+    """Bench test: queue a spray now, bypassing AI, debounce and cooldown. Key required."""
+    if not DEVICE_API_KEY or api_key != DEVICE_API_KEY:
+        raise HTTPException(status_code=401, detail="bad api key")
+    if pump not in (1, 2, 3):
+        raise HTTPException(status_code=400, detail="pump must be 1, 2 or 3")
+    duration_ms = max(100, min(duration_ms, 5000))
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("INSERT INTO sprays (timestamp, device_id, disease, pump, duration_ms) VALUES (?,?,?,?,?)",
+                (datetime.datetime.utcnow().strftime(TS_FMT), device_id, "TEST", pump, duration_ms))
+    con.commit()
+    con.close()
+    return {"queued": {"pump": pump, "duration_ms": duration_ms}}
+
 @app.get("/sprays")
 def get_sprays():
     con = sqlite3.connect(DB_PATH)
