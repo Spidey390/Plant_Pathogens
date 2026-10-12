@@ -250,19 +250,25 @@ def get_sprays():
 
 @app.get("/devices")
 def get_devices():
-    con = sqlite3.connect("results.db")
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     cur.execute("SELECT device_id, name, last_seen FROM devices ORDER BY last_seen DESC")
     rows = cur.fetchall()
     con.close()
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc)
     devices = []
     for r in rows:
         try:
-            last = datetime.datetime.fromisoformat(r[2])
+            raw_ts = r[2]
+            if raw_ts.endswith("Z"):
+                last = datetime.datetime.strptime(raw_ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+            else:
+                last = datetime.datetime.fromisoformat(raw_ts)
+                if last.tzinfo is None:
+                    last = last.replace(tzinfo=datetime.timezone.utc)
             secs = (now - last).total_seconds()
-            online = secs < 90
-        except:
+            online = -30 <= secs < 90
+        except Exception:
             online = False
         devices.append({"device_id": r[0], "name": r[1], "last_seen": r[2], "online": online})
     return {"devices": devices}
