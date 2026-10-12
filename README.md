@@ -1,60 +1,112 @@
 # Plant Pathogen Detection and Targeted Spraying
 
-This project detects maize leaf diseases from images uploaded by an ESP32-CAM or the web interface. It records detections and devices in SQLite. An authenticated camera can trigger a spray command after repeated high-confidence detections; a separate ESP32 controller polls for queued commands and drives three relay outputs.
+This project detects maize leaf diseases from images uploaded by an IoT-enabled ESP32-CAM node or through the web dashboard. Images are classified using a deep learning model running on a FastAPI backend. When an authenticated node detects a high-confidence plant pathogen, it automatically actuates a dedicated relay-driven pump to spray the appropriate targeted treatment directly.
 
-## Components
+---
 
-- `main.py` — FastAPI service, image preprocessing and classification, SQLite history, and spray command queue.
-- `templates/index.html` — browser interface (served by the application).
-- `Node/Node.ino` — ESP32-CAM firmware. Captures a JPEG every 30 seconds and posts it to the prediction endpoint.
-- `PumpController/PumpController.ino` — separate ESP32 DevKit firmware. Polls for commands and controls three relay channels.
-- `Node/secrets.h.example` and `PumpController/secrets.h.example` — configuration templates. Copy each to `secrets.h` and fill in local values; `secrets.h` is ignored by Git.
+## Hardware Components
 
-## Disease classes and treatment mapping
+The automated detection and spraying system consists of the following hardware modules:
 
-| Model class | Pump | Configured tank label |
-| --- | ---: | --- |
-| `Blight` | 1 | copper fungicide |
-| `Common_Rust` | 2 | sulfur fungicide |
-| `Gray_Leaf_Spot` | 3 | triazole fungicide |
+| Component | Specification / Model | Purpose / Details |
+| :--- | :--- | :--- |
+| **Microcontroller & Vision Unit** | **ESP32-CAM (AI-Thinker)** | Dual-core 32-bit MCU with built-in 2.4 GHz Wi-Fi, 4 MB external PSRAM, and internal DRAM. Captures leaf imagery, negotiates HTTPS with the API, and drives the spraying relays. |
+| **Camera Sensor** | **OV2640 (2 Megapixel)** | Connected directly to the ESP32-CAM DVP interface. Configured for JPEG capture at QVGA (320x240) resolution with `CAMERA_GRAB_LATEST` buffer mode. |
+| **Actuator Controller** | **3-Channel (or 4-Channel) 5V Relay Module** | Optocoupler-isolated, active-LOW relay board (`RELAY_ON = LOW`, `RELAY_OFF = HIGH`). Controls power switching to individual spray pumps while isolating the MCU from inductive motor spikes. |
+| **Fluid Dispensing Pumps** | **3x Mini DC Pumps (5V or 12V)** | Submersible or diaphragm micro-pumps dedicated to individual fungicide tanks. |
+| **Chemical Storage Tanks** | **3x Liquid Reservoirs** | - **Tank 1:** Copper fungicide (for Blight)<br>- **Tank 2:** Sulfur fungicide (for Common Rust)<br>- **Tank 3:** Triazole fungicide (for Gray Leaf Spot) |
+| **Plumbing & Atomization** | **Silicone Tubing & Misting Nozzles** | Distributes pressurized fluid from pumps to atomized sprayers directed toward the target crop area. |
+| **MCU & Logic Power Supply** | **5V DC Power Adapter (≥ 2.0A)** | Powers the ESP32-CAM (via 5V & GND) and relay board logic. A dedicated, high-amperage 5V supply is required to prevent brownout resets during Wi-Fi transmission bursts. |
+| **Pump Motor Power Supply** | **External DC Power Source (5V/12V)** | Supplies power to the pump motors through the relay Common (COM) and Normally Open (NO) terminals. Kept electrically separate from the MCU logic rail. |
+| **Flashing / Programming Interface** | **FTDI USB-to-TTL Adapter / ESP32-CAM-MB Shield** | Required to program the ESP32-CAM (via U0TXD, U0RXD, and GPIO 0 strapped to GND during flashing). |
+
+---
+
+## Hardware Wiring & Pin Mapping
+
+### ESP32-CAM to 3-Channel Relay Module
+
+| ESP32-CAM Pin | Relay Module Pin | Assigned Disease Class | Targeted Treatment |
+| :--- | :--- | :--- | :--- |
+| **GPIO 13** | **IN 1** | `Blight` | Pump 1: Copper Fungicide |
+| **GPIO 14** | **IN 2** | `Common_Rust` | Pump 2: Sulfur Fungicide |
+| **GPIO 15** | **IN 3** | `Gray_Leaf_Spot` | Pump 3: Triazole Fungicide |
+| **5V** | **VCC** *(Logic)* | — | Logic reference |
+| **GND** | **GND** | — | Common Ground |
+
+> [!IMPORTANT]
+> **Power Isolation & Brownout Prevention:**
+> 1. **Do not power the pump motors from the ESP32-CAM 5V pin.** Relay coil switching and motor current draw will cause severe voltage dips and trigger the ESP32 brownout detector.
+> 2. Connect the relay module's **JD-VCC** jumper to an independent 5V power supply, and ensure all grounds (GND) are securely tied together.
+> 3. Avoid using **GPIO 16** on the ESP32-CAM as it is internally reserved for external PSRAM chip select (CS).
+
+---
+
+## Disease Classes and Treatment Mapping
+
+| Model Class | Pump Output | Configured Tank Treatment |
+| :--- | :---: | :--- |
+| `Blight` | **Pump 1 (GPIO 13)** | Copper fungicide |
+| `Common_Rust` | **Pump 2 (GPIO 14)** | Sulfur fungicide |
+| `Gray_Leaf_Spot` | **Pump 3 (GPIO 15)** | Triazole fungicide |
 | `Healthy` | — | No spray |
 
-The tank labels describe the configured mapping only. Use appropriate treatments and follow their product labels and local guidance.
+---
 
-## Run the API
+## System Architecture & Software Components
 
-Python dependencies are listed in `requirements.txt`. Install them in a Python environment, then start the service with:
+- **`main.py`** — FastAPI application providing model inference, HSV green-leaf validation, prediction logging, SQLite persistence, and bench testing (`/pump/test`).
+- **`templates/index.html`** — Real-time monitoring dashboard and browser testing interface.
+- **`Node/Node.ino`** — Integrated ESP32-CAM firmware:
+  - Captures JPEG image via OV2640.
+  - Uploads image and device credentials to `/predict`.
+  - Parses prediction and triggers the respective relay channel directly for the configured spray duration (default: 5 seconds).
+- **`Node/secrets.h.example`** — Configuration template for Wi-Fi credentials (`WIFI_SSID`, `WIFI_PASS`) and `API_KEY`.
 
-```bash
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
+---
 
-On first startup, the application downloads its model from the configured Google Drive file if `plant_disease_model.h5` is not present. The model file and SQLite database are local runtime data and are not committed.
+## Setup & Running the API
 
-Set `DEVICE_API_KEY` in the server environment to a long, private key. Configure the same value as `API_KEY` in both device `secrets.h` files. Without a matching server key, device uploads will still be classified and recorded, but they will not create spray commands; `/pump/next` rejects requests.
+1. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Flash the devices
+2. **Start the FastAPI backend:**
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port 8000
+   ```
+   *On first run, the deep learning model (`plant_disease_model.h5`) will automatically be downloaded from Google Drive if not present.*
 
-For each firmware folder, copy its example configuration and edit it:
+3. **Configure API Security:**
+   Set the `DEVICE_API_KEY` environment variable in your production environment. Configure the same key as `API_KEY` in `Node/secrets.h`.
 
-```bash
-cp Node/secrets.h.example Node/secrets.h
-cp PumpController/secrets.h.example PumpController/secrets.h
-```
+---
 
-Set `WIFI_SSID`, `WIFI_PASS`, and `API_KEY` in both files. Open each `.ino` sketch in the Arduino IDE with ESP32 board support and the corresponding camera or ESP32 board selected. Flash `Node/Node.ino` to an ESP32-CAM and `PumpController/PumpController.ino` to a separate ESP32 DevKit. The camera device ID in both sketches must match (`ESP32-CAM-01` by default).
+## Flashing the ESP32-CAM
 
-The pump controller assumes an active-low relay module wired to GPIO 25, 26, and 27. Verify your relay board's logic, wiring, and safe fluid handling before connecting pumps; change `RELAY_ON`, `RELAY_OFF`, or `PUMP_PINS` to match the hardware.
+1. Copy the configuration template:
+   ```bash
+   cp Node/secrets.h.example Node/secrets.h
+   ```
+2. Edit `Node/secrets.h` with your Wi-Fi SSID, password, and `API_KEY`.
+3. Open `Node/Node.ino` in the Arduino IDE:
+   - **Board:** `AI Thinker ESP32-CAM`
+   - **CPU Frequency:** `240MHz`
+   - **Flash Frequency:** `80MHz`
+   - **Flash Mode:** `QIO`
+   - **Partition Scheme:** `Huge APP (3MB No OTA/1MB SPIFFS)`
+   - **PSRAM:** `Enabled`
+4. Connect the FTDI programmer (Bridge **GPIO 0 to GND** before powering on to enter flashing mode).
+5. Flash the sketch, disconnect GPIO 0 from GND, and press the Reset button.
 
-## API overview
+---
 
-- `POST /predict` — multipart fields `file`, optional `device_id` (defaults to `browser`), and optional `api_key`. Returns the prediction and an optional action. Browser scans do not trigger spraying.
-- `GET /results` — recent detections; accepts optional `device_id` filtering.
-- `GET /devices` — registered devices and last-seen times.
-- `POST /pump/next` — form fields `device_id` and `api_key`; returns one pending action or `{"action": null}`. Commands expire after 60 seconds.
-- `GET /sprays` — recent spray queue records.
+## API Overview
 
-The server only queues treatment for mapped disease classes when the latest two recorded readings for that device agree, each has confidence of at least 0.70, and both are within a three-minute window. It applies a ten-minute cooldown per device and pump. The configured spray duration is 3 seconds; the controller also caps any received duration at 5 seconds. The regular display confidence threshold is 0.45. No-leaf and uncertain images are not stored as classified results or considered for spray decisions.
-
-SQLite data is stored in `results.db` in the process working directory. The database is ignored by Git; configure persistent storage in the hosting environment if history must survive restarts.
+- `POST /predict` — Multipart form upload (`file`, `device_id`, `api_key`). Performs HSV leaf detection, runs model inference, returns predicted class and confidence.
+- `POST /pump/test` — Bench-testing endpoint (`device_id`, `pump`, `duration_ms`, `api_key`).
+- `GET /results` — Returns recent classification history (supports `device_id` query parameter).
+- `GET /devices` — Returns registered devices and online/offline status.
+- `GET /sprays` — Returns log of recent spray events.
+- `GET /` — Serves the interactive web monitoring dashboard.
