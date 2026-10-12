@@ -23,3 +23,4 @@ ENV/
 Node/secrets.h
 PumpController/secrets.h
 *.db
+.DS_Store
