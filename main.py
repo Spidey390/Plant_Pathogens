@@ -15,7 +15,7 @@ MODEL_PATH = "plant_disease_model.h5"
 GDRIVE_FILE_ID = "13e9PTZCsu10q8l0tnRSmQjjL8Kh5h9pK"
 
 CONFIDENCE_THRESHOLD = 0.45
-LEAF_GREEN_RATIO_THRESHOLD = 0.10
+LEAF_GREEN_RATIO_THRESHOLD = 0.05
 
 DB_PATH = "results.db"
 TS_FMT = "%Y-%m-%dT%H:%M:%SZ"
@@ -50,7 +50,7 @@ model = tf.keras.models.load_model(MODEL_PATH)
 class_names = ['Blight', 'Common_Rust', 'Gray_Leaf_Spot', 'Healthy']
 
 def init_db():
-    con = sqlite3.connect("results.db")
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     cur.execute("""CREATE TABLE IF NOT EXISTS results (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,8 +85,8 @@ init_db()
 def detect_leaf(img_array):
     bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
-    lower_green = np.array([40, 50, 50])
-    upper_green = np.array([80, 255, 255])
+    lower_green = np.array([25, 30, 30])
+    upper_green = np.array([85, 255, 255])
     green_mask = cv2.inRange(hsv, lower_green, upper_green)
     green_mask = cv2.morphologyEx(green_mask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
     h, w = img_array.shape[:2]
@@ -108,7 +108,7 @@ def preprocess_image(img_array):
     return np.expand_dims(normalized, axis=0)
 
 def upsert_device(device_id: str):
-    con = sqlite3.connect("results.db")
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     cur.execute("SELECT device_id FROM devices WHERE device_id=?", (device_id,))
     exists = cur.fetchone()
@@ -153,29 +153,44 @@ async def predict(file: UploadFile = File(...), device_id: str = Form("browser")
     contents = await file.read()
     img_pil = Image.open(io.BytesIO(contents)).convert("RGB")
     img_array = np.array(img_pil)
+    timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
     if not detect_leaf(img_array):
+        con = sqlite3.connect(DB_PATH)
+        cur = con.cursor()
+        cur.execute("INSERT INTO results (timestamp, disease, confidence, device_id) VALUES (?,?,?,?)",
+                    (timestamp, "No Leaf", 0.0, device_id))
+        con.commit()
+        con.close()
         return {
             "disease": "No Leaf",
             "confidence": 0.0,
-            "timestamp": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "timestamp": timestamp,
             "device_id": device_id,
             "message": "No leaf detected in image"
         }
+
     processed = preprocess_image(img_array)
     predictions = model.predict(processed)
     confidence = float(np.max(predictions))
     if confidence < CONFIDENCE_THRESHOLD:
+        con = sqlite3.connect(DB_PATH)
+        cur = con.cursor()
+        cur.execute("INSERT INTO results (timestamp, disease, confidence, device_id) VALUES (?,?,?,?)",
+                    (timestamp, "Uncertain", confidence, device_id))
+        con.commit()
+        con.close()
         return {
             "disease": "Uncertain",
             "confidence": confidence,
-            "timestamp": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "timestamp": timestamp,
             "device_id": device_id,
             "message": "Low confidence - point camera to a clear leaf"
         }
+
     disease = class_names[np.argmax(predictions)]
-    timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     
-    con = sqlite3.connect("results.db")
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     cur.execute("INSERT INTO results (timestamp, disease, confidence, device_id) VALUES (?,?,?,?)",
                 (timestamp, disease, confidence, device_id))
@@ -192,7 +207,7 @@ async def predict(file: UploadFile = File(...), device_id: str = Form("browser")
 
 @app.get("/results")
 def get_results(device_id: str = None):
-    con = sqlite3.connect("results.db")
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     if device_id:
         cur.execute("SELECT * FROM results WHERE device_id=? ORDER BY id DESC LIMIT 20", (device_id,))
@@ -201,6 +216,7 @@ def get_results(device_id: str = None):
     rows = cur.fetchall()
     con.close()
     return {"data": rows}
+
 
 @app.post("/pump/next")
 def pump_next(device_id: str = Form(...), api_key: str = Form("")):

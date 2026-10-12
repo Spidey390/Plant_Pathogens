@@ -321,15 +321,18 @@ async function loadDevices(){
     const empty=document.getElementById('nodes-empty');
     if(!data.devices||data.devices.length===0){
       empty.style.display='block';
-      return;
+      document.getElementById('online-count').textContent='0 online';
+    } else {
+      empty.style.display='none';
+      const online=data.devices.filter(d=>d.online).length;
+      document.getElementById('online-count').textContent=`${online} online`;
+      const cards=data.devices.map(d=>buildNodeCard(d)).join('');
+      grid.innerHTML=cards+'<div id="nodes-empty" style="display:none"></div>';
     }
-    empty.style.display='none';
-    const online=data.devices.filter(d=>d.online).length;
-    document.getElementById('online-count').textContent=`${online} online`;
-    const cards=data.devices.map(d=>buildNodeCard(d)).join('');
-    grid.innerHTML=cards+'<div id="nodes-empty" style="display:none"></div>';
-    loadAllActivity();
   }catch(e){console.error(e)}
+  finally{
+    loadAllActivity();
+  }
 }
 
 function buildNodeCard(d){
@@ -596,8 +599,13 @@ function resetApp(){
 }
 
 loadDevices();
+loadAllActivity();
 loadHistory('browser');
-setInterval(()=>{loadDevices();loadHistory('browser');},15000);
+setInterval(()=>{
+  loadDevices();
+  loadAllActivity();
+  loadHistory('browser');
+}, 5000);
 </script>
 </body>
 </html>
